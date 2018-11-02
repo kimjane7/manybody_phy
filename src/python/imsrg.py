@@ -17,7 +17,7 @@ class IMSRG:
 		self.parts = particles
 		self.dim1B = len(holes)+len(particles)
 		self.dim2B = self.dim1B**2
-		self.tolerance = 10e-8
+		self.tolerance = 10e-16
 
 		# bases and indices
 		self.bas1B = [i for i in range(self.dim1B)]
@@ -283,6 +283,20 @@ class IMSRG:
 	### MAGNUS EXPANSION ###
 	########################
 
+	def check_hermiticity(self):
+
+		# check Hamiltonian is Hermitian
+		if (np.allclose(self.Gamma,transpose(self.Gamma))) == False:
+			print("Oh no! Gamma is not Hermitian!")
+
+		# check eta is anti-Hermitian
+		if (np.allclose(self.eta2B,-transpose(self.eta2B))) == False:
+			print("Oh no! Eta is not anti-Hermitian!")
+
+		# check Omega is anti-Hermitian
+		if (np.allclose(self.Omega2B,-transpose(self.Omega2B))) == False:
+			print("Oh no! Omega is not anti-Hermitian!")
+
 
 
 	def factorial(self,n):
@@ -466,6 +480,7 @@ class IMSRG:
 				self.dOmega1B += self.prefactors[k]*C1B
 				self.dOmega2B += self.prefactors[k]*C2B	
 			k += 1
+		self.kterms = k
 		
 
 
@@ -518,6 +533,7 @@ class IMSRG:
 		return np.sqrt(norm)
 
 
+	'''
 	def derivative_magnus(self,t,y):
 
 		# get Omega from linear array y
@@ -536,6 +552,7 @@ class IMSRG:
 
 		return dy
 
+	'''
 
 	def magnus(self):
 
@@ -557,12 +574,13 @@ class IMSRG:
 
 		# forward euler
 		s = 0.0
-		print("="*39)
-		print("  {:<10}{:<9}{:<9}{:<10}".format("s","E","dE/ds","||eta||"))
-		print("="*39)
+		print("="*50)
+		print("  {:<10}{:<9}{:<9}{:<10}{:<10}".format("s","E","dE/ds","||eta||","kterms"))
+		print("="*50)
 		while s < self.smax:
-			print("{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}".format(s,self.E,self.dE,linalg.norm(self.eta2B)))
+			print("{:<10.4f}{:<10.4f}{:<10.4f}{:<10.4f}{:<10d}".format(s,self.E,self.dE,linalg.norm(self.eta2B),self.kterms))
 			outfile.write('{:<14.7f}{:<14.7f}{:<14.7f}{:<14.7f}{:<14.7f}\n'.format(s,self.E,self.dE,self.Gammaod_norm(),linalg.norm(self.eta2B)))
+			self.check_hermiticity()
 			self.calc_eta_wegner()
 			self.calc_dOmega()
 			self.Omega1B += self.ds*self.dOmega1B
