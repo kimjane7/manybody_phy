@@ -51,7 +51,7 @@ double CSRG::frobenius_norm(mat A){
 
 	for(int i = 0; i < N_; ++i){
 		for(int j = 0; j < N_; ++j){
-			sum += H_(i,j)*H_(i,j);
+			sum += A(i,j)*A(i,j);
 		}
 	}
 
@@ -217,7 +217,7 @@ void CSRG::srg(vec snapshots, string filename){
 
 void CSRG::magnus(vec snapshots, string filename){
 
-	int k = 0;
+	//int k = 0;
 	H_ = H0_;
 	Omega_.zeros(N_,N_);
 
@@ -227,17 +227,21 @@ void CSRG::magnus(vec snapshots, string filename){
 	outfile << "# dimension of H = " << N_ << endl;
 	outfile << "# flow parameter s, norm of off-diagonal elements of H, vectorized elements of H (N*N elements)" << endl;
 
-
+	cout << frobenius_norm(Omega_) << endl;
 	for(double s = 0; s <= smax_; s += ds_){
+
+		cout << s << "\t" << frobenius_norm(Omega_) << endl;
+		outfile << s << "\t" << offdiag_H() << "\t" << frobenius_norm(Omega_) << endl;
 
 		RK4_magnus();
 
+		/*
 		// write snapshots to file
 		if(fabs(s-snapshots(k)) < 0.5*ds_){
 
 			H_ = expmat(Omega_)*H0_*expmat(-Omega_);
 
-			outfile << s << "\t" << offdiag_H() << "\t";
+			outfile << s << "\t" << offdiag_H() << "\t" << frobenius_norm(Omega_) << "\t";
 
 			for(int i = 0; i < N_; ++i){
 				for(int j = 0; j < N_; ++j){
@@ -248,6 +252,7 @@ void CSRG::magnus(vec snapshots, string filename){
 			outfile << endl;
 			++k;
 		}
+		*/
 	}
 
 	outfile.close();
@@ -289,6 +294,13 @@ int main(int argc, char *argv[]){
 	H0(3,3) = 6*d-g;
 	H0(4,4) = 8*d-g;
 	H0(5,5) = 10*d-g;
+
+	for(int i = 0; i < 6; ++i){
+		for(int j = 0; j < 6; ++j){
+			cout << H0(i,j) << "\t";
+		}
+		cout << endl;
+	}
 
 	CSRG pairing_model(H0, 6, 170, smax, ds);
 	vec snapshots = linspace<vec>(0.0, smax);

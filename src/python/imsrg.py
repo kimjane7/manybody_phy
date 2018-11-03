@@ -243,6 +243,7 @@ class IMSRG:
 
 
 	def calc_eta_white(self):
+		# why isn't this working? denom = 0
 
 		# one-body part
 		self.eta1B = np.zeros_like(self.f)
@@ -665,7 +666,7 @@ def main():
 	holes = [0,1,2,3]
 	particles = [4,5,6,7]
 
-	PairingModel = IMSRG(1.0,0.5,10.0,0.01,holes,particles,"wegner")
+	PairingModel = IMSRG(1.0,0.5,10.0,0.01,holes,particles,"white")
 	#PairingModel.imsrg("imsrg_flow.dat")
 	#import pdb; pdb.set_trace()
 	PairingModel.magnus("magnus_flow.dat")
