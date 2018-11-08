@@ -33,7 +33,7 @@ class PairingModel:
 		# store exact eigenvalues
 		self.energies = linalg.eigvalsh(self.hamiltonian)
 
-		print("True ground state energy = ", self.energies[0])
+		print('\nTrue ground state energy = ', self.energies[0], '\n')
 
 
 class Solver:
@@ -47,14 +47,30 @@ class Solver:
 		self.dim2B = self.dim1B**2
 		self.tolerance = 10e-8
 
+		# bases and indices
+		self.bas1B = [i for i in range(self.dim1B)]
+		self.build_bas2B()
+		self.build_ph_bas2B()
+
+		# occupation number matrices
+		self.build_occ1B()
+		self.build_occ2B()
+		self.build_ph_occ2B_A()
+
+		# pairing hamiltonian
+		self.normal_order()
+
 		# magnus expansion coefficients
 		self.max = 100
-		#self.precalculate_coeffs()
+		self.precalc_coeffs()
 
+		print('='*60)
+		print('{:^20}{:^20}{:^20}'.format("Method","Ground state energy","Error (%)"))
+		print('='*60)
 
 
 	#################### COMMON #####################
-
+	
 	def commutator(self, A, B):
 
 		return dot(A,B)-dot(B,A)
@@ -97,6 +113,17 @@ class Solver:
 			self.coeffs.append(B[k]/self.factorials[k])
 
 
+	def nested_commutator(self, A, B, k):
+
+		if k == 0:
+			return B
+		else:
+			ad = B
+			for i in range(0,k):
+				ad = self.commutator(A,ad)
+			return ad
+
+
 	###################### SRG ######################
 
 	def srg_derivative(self, t, y):
@@ -126,7 +153,7 @@ class Solver:
 		outfile.write("# flow parameter s, ||Hod||, diagonal elements of Hd\n".format(self.pairing_model.d, self.pairing_model.g))
 
 		# initial hamiltonian
-		self.H = self.pairing_model.hamiltonian
+		self.H = self.pairing_model.hamiltonian.copy()
 		self.Hd = diag(diag(self.H))
 		self.Hod = self.H-self.Hd
 		y0 = reshape(self.H,-1)
@@ -145,26 +172,20 @@ class Solver:
 
 		outfile.close()
 
+		error = 100.0*abs(self.Hd[0,0]-self.pairing_model.energies[0])/self.pairing_model.energies[0]
+		print('{:^20}{:^20.11}{:^20.5}'.format("SRG",self.Hd[0,0],error))
+
 
 	################# SRG w/ Magnus #################
-
-	def nested_commutator(self, A, B, k):
-
-		if k == 0:
-			return B
-		else:
-			ad = B
-			for i in range(0,k):
-				ad = self.commutator(A,ad)
-			return ad
 
 	def srg_magnus_derivative(self, t, y):
 
 		# get Omega from linear array y
 		self.Omega = reshape(y,(6,6))
 
+
 		# calculate new H
-		self.H = expm(self.Omega)*self.pairing_model.hamiltonian*expm(-self.Omega)
+		self.H = dot(expm(self.Omega),dot(self.pairing_model.hamiltonian,expm(-self.Omega)))
 
 		# calculate eta wegner
 		self.Hd = diag(diag(self.H))
@@ -181,7 +202,6 @@ class Solver:
 		# reshape into linear array
 		dy = reshape(dOmega,-1)
 
-		print("check")
 
 		return dy
 
@@ -194,7 +214,7 @@ class Solver:
 		outfile.write("# flow parameter s, ||Hod||, diagonal elements of Hd\n".format(self.pairing_model.d, self.pairing_model.g))
 
 		# initial hamiltonian
-		self.H = self.pairing_model.hamiltonian
+		self.H = self.pairing_model.hamiltonian.copy()
 		self.Hd = diag(diag(self.H))
 		self.Hod = self.H-self.Hd
 		
@@ -208,6 +228,7 @@ class Solver:
 		solver.set_initial_value(y0, 0.0)
 
 		while solver.successful() and solver.t < self.smax:
+
 			outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 				   .format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
 			ys = solver.integrate(self.smax, step=True)
@@ -215,6 +236,9 @@ class Solver:
 			if linalg.norm(self.Hod) < self.tolerance: break
 
 		outfile.close()
+
+		error = 100.0*abs(self.Hd[0,0]-self.pairing_model.energies[0])/self.pairing_model.energies[0]
+		print('{:^20}{:^20.11}{:^20.5}'.format("SRG w/ Magnus",self.Hd[0,0],error))
 
 
 
@@ -225,7 +249,8 @@ def main():
 
 	system = PairingModel(1.0,0.5,holes,particles)
 	solver = Solver(system, 0.01, 10.0)
-	solver.SRG("srg_magnus_flow.dat")
+	solver.SRG("srg_flow.dat")
+	solver.SRG_MAGNUS("srg_magnus_flow.dat")
 
 
 if __name__ == "__main__":
