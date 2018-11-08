@@ -169,15 +169,15 @@ class IMSRG:
 			for j in self.holes:
 				self.E0 += 0.5*H2B[self.idx2B[(i,j)],self.idx2B[(i,j)]]
 
-		self.f0 = H1B
+		self.f0 = H1B.copy()
 		for p in self.bas1B:
 			for q in self.bas1B:
 				for i in self.holes:
 					self.f0[p,q] += H2B[self.idx2B[(p,i)],self.idx2B[(q,i)]]
 
-		self.Gamma0 = H2B
+		self.Gamma0 = H2B.copy()
 
-		self.E, self.f, self.Gamma = self.E0, self.f0, self.Gamma0
+		self.E, self.f, self.Gamma = self.E0.copy(), self.f0.copy(), self.Gamma0.copy()
 
 
 
@@ -243,7 +243,6 @@ class IMSRG:
 
 
 	def calc_eta_white(self):
-		# why isn't this working? denom = 0
 
 		# one-body part
 		self.eta1B = np.zeros_like(self.f)
@@ -266,14 +265,13 @@ class IMSRG:
 						aj = self.idx2B[(a,j)]
 						bi = self.idx2B[(b,i)]
 						bj = self.idx2B[(b,j)]
-						denom = (self.f[a,a]-self.f[b,b]-self.f[i,i]-self.f[j,j]
+						denom = (self.f[a,a]+self.f[b,b]-self.f[i,i]-self.f[j,j]
 							    +self.Gamma[ab,ab]+self.Gamma[ij,ij]
 							    -self.Gamma[ai,ai]-self.Gamma[aj,aj]
 							    -self.Gamma[bi,bi]-self.Gamma[bj,bj])
-						if denom != 0.0:
-							value = self.Gamma[ab,ij]/denom
-							self.eta2B[ab,ij] = value
-							self.eta2B[ij,ab] = -value
+						value = self.Gamma[ab,ij]/denom
+						self.eta2B[ab,ij] = value
+						self.eta2B[ij,ab] = -value
 
 
 	def calc_dH(self):
@@ -448,7 +446,6 @@ class IMSRG:
 
 		# 2B-2B
 
-		#### CHECK THESE SGN !!!!!!!!! ####
 		AB = dot(A2B,dot(self.occ2B_B,B2B))
 		ABT = transpose(AB)
 		for p in range(self.dim1B):
@@ -489,9 +486,6 @@ class IMSRG:
 							              +A1B[t,s]*B2B[pq,tr]-B1B[t,s]*A2B[pq,tr])
 
 		# 2B-2B
-
-		#### CHECK THESE SGN !!!!!!!!! ####
-
 		
 		AB = dot(A2B,dot(self.occ2B_B,B2B))
 		ABT = transpose(AB)
@@ -523,8 +517,8 @@ class IMSRG:
 		#print("calculating dOmega...")
 
 		# k=0 term
-		self.dOmega1B = self.eta1B
-		self.dOmega2B = self.eta2B
+		self.dOmega1B = self.eta1B.copy()
+		self.dOmega2B = self.eta2B.copy()
 
 		# k=1 term (only odd term)
 		C0B, C1B, C2B = self.commutator2B(self.Omega1B,self.Omega2B,self.eta1B,self.eta2B)
@@ -549,9 +543,9 @@ class IMSRG:
 		#print("calculating E, f, Gamma...")
 
 		# k=0 term
-		self.E = self.E0
-		self.f = self.f0
-		self.Gamma = self.Gamma0
+		self.E = self.E0.copy()
+		self.f = self.f0.copy()
+		self.Gamma = self.Gamma0.copy()
 
 		# k=1 term (only odd term)
 		C0B, C1B, C2B = self.commutator2B(self.Omega1B,self.Omega2B,self.f,self.Gamma)
@@ -628,7 +622,7 @@ class IMSRG:
 		y0 = np.append(reshape(self.Omega1B,-1),reshape(self.Omega2B,-1))
 
 		# initial hamiltonian
-		self.E, self.f, self.Gamma = self.E0, self.f0, self.Gamma0
+		self.E, self.f, self.Gamma = self.E0.copy(), self.f0.copy(), self.Gamma0.copy()
 		self.calc_eta()
 		self.calc_dH()
 		self.calc_dOmega()
@@ -666,7 +660,7 @@ def main():
 	holes = [0,1,2,3]
 	particles = [4,5,6,7]
 
-	PairingModel = IMSRG(1.0,0.5,10.0,0.01,holes,particles,"white")
+	PairingModel = IMSRG(1.0,0.5,10.0,0.1,holes,particles,"white")
 	#PairingModel.imsrg("imsrg_flow.dat")
 	#import pdb; pdb.set_trace()
 	PairingModel.magnus("magnus_flow.dat")

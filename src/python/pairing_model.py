@@ -17,7 +17,7 @@ class PairingModel:
 		self.holes = holes
 		self.parts = particles
 
-		# pairing model hamiltonian in mb basis states
+		# pairing model hamiltonian in mb state basis
 		self.hamiltonian = np.zeros((6,6))
 		for i in range(0,6):
 			for j in range(0,6):
@@ -49,7 +49,7 @@ class Solver:
 
 		# magnus expansion coefficients
 		self.max = 100
-		self.precalculate_coeffs()
+		#self.precalculate_coeffs()
 
 
 
@@ -76,7 +76,7 @@ class Solver:
 		return self.factorial(n)/(self.factorial(k)*self.factorial(n-k))
 
 
-	def precalculate_coeffs(self):
+	def precalc_coeffs(self):
 
 		# store factorials
 		self.factorials = []
@@ -225,7 +225,7 @@ def main():
 
 	system = PairingModel(1.0,0.5,holes,particles)
 	solver = Solver(system, 0.01, 10.0)
-	solver.SRG_MAGNUS("srg_magnus_flow.dat")
+	solver.SRG("srg_magnus_flow.dat")
 
 
 if __name__ == "__main__":
