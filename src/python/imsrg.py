@@ -42,7 +42,7 @@ class IMSRG:
 
 		# magnus expansion coefficients
 		self.max = 100
-		self.build_prefactors()
+		self.build_coeffs()
 
 
 	########################
@@ -276,8 +276,6 @@ class IMSRG:
 
 	def calc_dH(self):
 
-		# print("calculating dE, df, dGamma...")
-
 		self.dE, self.df, self.dGamma = self.commutator2B(self.eta1B,self.eta2B,self.f,self.Gamma)
 
 
@@ -313,7 +311,7 @@ class IMSRG:
 
 		# initial values
 		y0 = np.append([self.E0],np.append(reshape(self.f0,-1),reshape(self.Gamma0,-1)))
-		self.E, self.f, self.Gamma = self.E0, self.f0, self.Gamma0
+		self.E, self.f, self.Gamma = self.E0.copy(), self.f0.copy(), self.Gamma0.copy()
 		self.calc_eta()
 		self.calc_dH()
 
@@ -374,7 +372,7 @@ class IMSRG:
 		return self.factorial(n)/(self.factorial(k)*self.factorial(n-k))
 
 
-	def build_prefactors(self):	
+	def build_coeffs(self):	
 
 		# store factorial values
 		self.factorials = []
@@ -389,10 +387,10 @@ class IMSRG:
 			for k in range(n):
 				B[n] -= self.binomial_coeff(n+1,k)*B[k]/(n+1)
 
-		# store prefactors
-		self.prefactors = []
+		# store magnus coefficients
+		self.coeffs = []
 		for n in range(self.max):
-			self.prefactors.append(B[n]/self.factorials[n])
+			self.coeffs.append(B[n]/self.factorials[n])
 
 
 	def commutator2B(self, A1B, A2B, B1B, B2B):
@@ -522,8 +520,8 @@ class IMSRG:
 
 		# k=1 term (only odd term)
 		C0B, C1B, C2B = self.commutator2B(self.Omega1B,self.Omega2B,self.eta1B,self.eta2B)
-		self.dOmega1B += self.prefactors[1]*C1B
-		self.dOmega2B += self.prefactors[1]*C2B
+		self.dOmega1B += self.coeffs[1]*C1B
+		self.dOmega2B += self.coeffs[1]*C2B
 
 		# remaining even terms
 		k = 2
@@ -531,8 +529,8 @@ class IMSRG:
 
 			C0B, C1B, C2B = self.commutator2B(self.Omega1B,self.Omega2B,C1B,C2B)
 			if(k%2 == 0):
-				self.dOmega1B += self.prefactors[k]*C1B
-				self.dOmega2B += self.prefactors[k]*C2B	
+				self.dOmega1B += self.coeffs[k]*C1B
+				self.dOmega2B += self.coeffs[k]*C2B	
 			k += 1
 		self.kterms = k
 		
