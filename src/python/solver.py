@@ -8,11 +8,12 @@ import sys
 
 class Solver:
 
-	def __init__(self, pairing_model, ds, smax):
+	def __init__(self, pairing_model, smax, ds, euler_option = False):
 
 		self.pairing_model = pairing_model
-		self.ds = ds
 		self.smax = smax
+		self.ds = ds
+		self.euler_option = euler_option
 		self.dim1B = len(self.pairing_model.holes)+len(self.pairing_model.parts)
 		self.dim2B = self.dim1B**2
 		self.tolerance = 10e-8
@@ -34,10 +35,11 @@ class Solver:
 		# pairing hamiltonian
 		self.normal_order()
 
+		'''
 		print('='*60)
 		print('{:^20}{:^20}{:^20}'.format("Method","Ground state energy","Error (%)"))
 		print('='*60)
-
+		'''
 
 
 	###################### SRG ######################
@@ -70,29 +72,45 @@ class Solver:
 		outfile.write('#    {:<11}{:<15}{:<15}\n'.format("s","||Hod||","diagonal elements of H"))
 		outfile.write("# "+"="*113+"\n\n")
 
-
 		# initial hamiltonian
 		self.H = self.pairing_model.hamiltonian.copy()
 		self.Hd = diag(diag(self.H))
 		self.Hod = self.H-self.Hd
 		y0 = reshape(self.H,-1)
-
+		
 		# integrate
-		solver = ode(self.srg_derivative,jac=None)
-		solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
-		solver.set_initial_value(y0, 0.0)
+		if self.euler_option:
 
-		while solver.successful() and solver.t < self.smax:
-			outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
-				   .format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
-			ys = solver.integrate(self.smax, step=True)
-			solver.integrate(solver.t+self.ds)
-			if(linalg.norm(self.Hod) < self.tolerance): break
+			ys = y0.copy()
+			s = 0.0
+
+			while s < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(s,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
+				ys += self.ds*self.srg_derivative(s,ys)
+				s += self.ds
+				if(linalg.norm(self.Hod) < self.tolerance): break
+
+		else:
+
+			solver = ode(self.srg_derivative,jac=None)
+			solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
+			solver.set_initial_value(y0, 0.0)
+
+			while solver.successful() and solver.t < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
+				ys = solver.integrate(self.smax, step=True)
+				solver.integrate(solver.t+self.ds)
+				if(linalg.norm(self.Hod) < self.tolerance): break
+
 
 		outfile.close()
 
+		'''
 		error = 100.0*abs(self.Hd[0,0]-self.pairing_model.energies[0])/self.pairing_model.energies[0]
 		print('{:^20}{:^20.11}{:^20.5}'.format("SRG",self.Hd[0,0],error))
+		'''
 
 
 	################# SRG w/ Magnus #################
@@ -144,22 +162,39 @@ class Solver:
 		y0 = reshape(self.Omega,-1)
 
 		# integrate
-		solver = ode(self.srg_magnus_derivative,jac=None)
-		solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
-		solver.set_initial_value(y0, 0.0)
+		if self.euler_option:
 
-		while solver.successful() and solver.t < self.smax:
+			ys = y0.copy()
+			s = 0.0
 
-			outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
-				   .format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
-			ys = solver.integrate(self.smax, step=True)
-			solver.integrate(solver.t+self.ds)
-			if linalg.norm(self.Hod) < self.tolerance: break
+			while s < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(s,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
+				ys += self.ds*self.srg_magnus_derivative(s,ys)
+				s += self.ds
+				if(linalg.norm(self.Hod) < self.tolerance): break
+
+		else:
+
+			solver = ode(self.srg_magnus_derivative,jac=None)
+			solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
+			solver.set_initial_value(y0, 0.0)
+
+			while solver.successful() and solver.t < self.smax:
+
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
+				ys = solver.integrate(self.smax, step=True)
+				solver.integrate(solver.t+self.ds)
+				if linalg.norm(self.Hod) < self.tolerance: break
 
 		outfile.close()
 
+		'''
 		error = 100.0*abs(self.Hd[0,0]-self.pairing_model.energies[0])/self.pairing_model.energies[0]
 		print('{:^20}{:^20.11}{:^20.5}'.format("SRG w/ Magnus",self.Hd[0,0],error))
+
+		'''
 
 	
 	################### IM-SRG(2) ###################
@@ -209,21 +244,37 @@ class Solver:
 		self.calc_dH()
 
 		# integrate
-		solver = ode(self.imsrg_derivative,jac=None)
-		solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
-		solver.set_initial_value(y0, 0.0)
+		if self.euler_option:
 
-		while solver.successful() and solver.t < self.smax:
-			outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
-				   .format(solver.t,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()))
-			ys = solver.integrate(self.smax, step=True)
-			solver.integrate(solver.t+self.ds)
-			if(abs(self.dE/self.E) < self.tolerance): break
+			ys = y0.copy()
+			s = 0.0
+
+			while s < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(s,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()))
+				ys += self.ds*self.imsrg_derivative(s,ys)
+				s += self.ds
+				if(abs(self.dE/self.E) < self.tolerance): break
+
+		else:
+
+			solver = ode(self.imsrg_derivative,jac=None)
+			solver.set_integrator('vode', method='bdf', order=5, nsteps=1000)
+			solver.set_initial_value(y0, 0.0)
+
+			while solver.successful() and solver.t < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(solver.t,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()))
+				ys = solver.integrate(self.smax, step=True)
+				solver.integrate(solver.t+self.ds)
+				if(abs(self.dE/self.E) < self.tolerance): break
 
 		outfile.close()
 
+		'''
 		error = 100.0*abs(self.E-self.pairing_model.energies[0])/self.pairing_model.energies[0]
 		print('{:^20}{:^20.11}{:^20.5}'.format("IMSRG",self.E,error))
+		'''
 
 
 	############## IM-SRG(2) w/ Magnus ##############
@@ -252,8 +303,6 @@ class Solver:
 
 
 	def calc_H(self):
-
-		#print("calculating E, f, Gamma...")
 
 		# k=0 term
 		self.E = self.E0.copy()
@@ -324,24 +373,41 @@ class Solver:
 		self.calc_dOmega()
 
 		# integrate
-		solver = ode(self.imsrg_magnus_derivative,jac=None)
-		solver.set_integrator('vode', method='bdf', order=2, nsteps=1000)
-		solver.set_initial_value(y0, 0.0)
+		if self.euler_option:
 
-		while solver.successful() and solver.t < self.smax:
-			outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
-				   .format(solver.t,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm(),linalg.norm(self.Omega2B)))
-			ys = solver.integrate(self.smax, step=True)
-			solver.integrate(solver.t+self.ds)
-			self.calc_H()
-			self.calc_dH()
-			if(abs(self.dE/self.E) < self.tolerance): break
+			ys = y0.copy()
+			s = 0.0
+
+			while s < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(s,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()))
+				ys += self.ds*self.imsrg_magnus_derivative(s,ys)
+				s += self.ds
+				self.calc_H()
+				self.calc_dH()
+				if(abs(self.dE/self.E) < self.tolerance): break
+
+		else:
+
+			solver = ode(self.imsrg_magnus_derivative,jac=None)
+			solver.set_integrator('vode', method='bdf', order=2, nsteps=1000)
+			solver.set_initial_value(y0, 0.0)
+
+			while solver.successful() and solver.t < self.smax:
+				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
+					   .format(solver.t,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm(),linalg.norm(self.Omega2B)))
+				ys = solver.integrate(self.smax, step=True)
+				solver.integrate(solver.t+self.ds)
+				self.calc_H()
+				self.calc_dH()
+				if(abs(self.dE/self.E) < self.tolerance): break
 
 		outfile.close()
 
+		'''
 		error = 100.0*abs(self.E-self.pairing_model.energies[0])/self.pairing_model.energies[0]
 		print('{:^20}{:^20.11}{:^20.5}'.format("IMSRG w/ Magnus",self.E,error))
-
+		'''
 
 
 	#################### COMMON #####################
