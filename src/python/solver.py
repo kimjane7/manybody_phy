@@ -380,7 +380,7 @@ class Solver:
 
 			while s < self.smax:
 				outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
-					   .format(s,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()))
+					   .format(s,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()),linalg.norm(self.Omega2B))
 				ys += self.ds*self.imsrg_magnus_derivative(s,ys)
 				s += self.ds
 				self.calc_H()
