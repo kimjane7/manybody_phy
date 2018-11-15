@@ -35,10 +35,17 @@ class Solver:
 		# pairing hamiltonian
 		self.normal_order()
 
-		# s-values for writing to file
-		self.s_write = np.arange(0,smax,ds)
-		#self.s_write = np.append(np.arange(0,0.5*smax,ds),np.arange(0.5*smax,smax,ds*2))
-		self.si = 0
+		# limit the number of lines written to file
+		self.limit = 200
+		self.s_iter = 0
+		if (smax/ds) <= self.limit:
+			self.s_write = np.arange(0,smax,ds)
+			self.limit = len(self.s_write)
+
+		else:
+			f = 0.25
+			self.s_write = np.append(np.arange(0,f*smax,2.0*f*smax/self.limit),np.arange(f*smax,smax,2*(1-f)*smax/self.limit))
+
 
 		'''
 		print('='*60)
@@ -82,21 +89,32 @@ class Solver:
 		self.Hd = diag(diag(self.H))
 		self.Hod = self.H-self.Hd
 		y0 = reshape(self.H,-1)
+
+		# store initial size of off-diagonal
+		Hod0 = linalg.norm(self.Hod)
 		
-		# integrate
 		if self.euler_option:
 
 			ys = y0.copy()
 			s = 0.0
 
 			while s < self.smax:
-				if (self.si < len(self.s_write)) and (abs(s-self.s_write[self.si]) < 0.5*self.ds):
+
+				# write to file
+				if (self.s_iter < self.limit) and (abs(s-self.s_write[self.s_iter]) < 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						   .format(s,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
-					self.si += 1
+					self.s_iter += 1
+
+				# euler step
 				ys += self.ds*self.srg_derivative(s,ys)
 				s += self.ds
-				if(linalg.norm(self.Hod) < self.tolerance): break
+
+				if (self.s_iter >= self.limit): break
+				if (linalg.norm(self.Hod) > Hod0):
+					print("Diverging!")
+					break
+
 
 		else:
 
@@ -105,17 +123,23 @@ class Solver:
 			solver.set_initial_value(y0, 0.0)
 
 			while solver.successful() and solver.t < self.smax:
-				if (self.si < len(self.s_write)) and (abs(solver.t-self.s_write[self.si]) < 0.5*self.ds):
+
+				# write to file
+				if (self.s_iter < self.limit) and (abs(solver.t-self.s_write[self.s_iter]) < 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						.format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
-					self.si += 1
+					self.s_iter += 1
+
+				# integrate
 				ys = solver.integrate(self.smax, step=True)
 				solver.integrate(solver.t+self.ds)
+
 				if(linalg.norm(self.Hod) < self.tolerance): break
 
 
+
 		outfile.close()
-		self.si = 0
+		self.s_iter = 0
 
 		'''
 		error = 100.0*abs(self.Hd[0,0]-self.pairing_model.energies[0])/self.pairing_model.energies[0]

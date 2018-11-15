@@ -8,17 +8,17 @@ def main():
 
 	system = PairingModel(1.0,0.5,holes,particles)
 
-	'''
-	for ds in [0.001, 0.01, 0.05]:
+	for ds in [0.001, 0.01, 0.1]:
+		print("ds = ",ds)
 		solver = Solver(system, 10.0, ds, euler_option=True)
 		solver.SRG("data/srg_euler_"+str(ds)+"_flow.dat")
+		del solver
 
-
+		'''
 	for ds in [0.001, 0.01, 0.05, 0.1, 0.5]:
 		solver = Solver(system, 10.0, ds, euler_option=True)
 		solver.SRG_MAGNUS("data/srg_magnus_euler_"+str(ds)+"_flow.dat")
-	'''
-
+	
 
 	for ds in [0.1, 0.5]:
 		solver = Solver(system, 10.0, ds, euler_option=True)
@@ -27,7 +27,7 @@ def main():
 	for ds in [0.1, 0.5]:
 		solver = Solver(system, 10.0, ds, euler_option=True)
 		solver.IMSRG_MAGNUS("data/imsrg_magnus_euler_"+str(ds)+"_flow.dat","white")
-
+	'''
 	
 
 
