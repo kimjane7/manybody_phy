@@ -29,7 +29,7 @@ for i in range(len(methods)):
 	########## E vs. s ##########
 	#############################
 
-	'''
+	
 	plt.figure(figsize=(6,6))
 	fig = plt.figure(1)
 	axes = plt.gca()
@@ -49,16 +49,15 @@ for i in range(len(methods)):
 	plt.plot(s,[1.41677428435]*len(s),linewidth=2,linestyle='--',color='black',label=r'True g.s. energy')
 
 	plt.legend(loc=1, shadow=True, fontsize=12)
-	plt.xlabel(r'Flow Parameter $s$', fontsize=12, weight='normal', family='serif')
-	plt.ylabel(r'Ground State Energy (MeV)', fontsize=12, weight='normal', family='serif')
+	plt.xlabel(r'$s$', fontsize=12, weight='normal', family='serif')
+	plt.ylabel(r'E [$a.u.$]', fontsize=12, weight='normal', family='serif')
 	plt.title(labels[i]+r' Flow (Euler)', fontsize=12, weight='normal', family='serif')
 	plt.tight_layout()
 
 	figname = methods[i]+'_euler_energy.png'
 	plt.savefig(figname, format='png')
-	os.system('okular '+figname)
+	#os.system('okular '+figname)
 	plt.clf()
-	'''
 
 
 
@@ -92,12 +91,12 @@ for i in range(len(methods)):
 
 
 	plt.legend(loc=1, shadow=True, fontsize=12)
-	plt.xlabel(r'Flow Parameter $s$', fontsize=12, weight='normal', family='serif')
+	plt.xlabel(r'$s$', fontsize=12, weight='normal', family='serif')
 	plt.ylabel(offdiag_labels[i], fontsize=12, weight='normal', family='serif')
 	plt.title(labels[i]+r' Flow (Euler)', fontsize=12, weight='normal', family='serif')
 	plt.tight_layout()
 
 	figname = methods[i]+'_euler_offdiag.png'
 	plt.savefig(figname, format='png')
-	os.system('okular '+figname)
+	#os.system('okular '+figname)
 	plt.clf()
