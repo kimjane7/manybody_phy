@@ -8,51 +8,48 @@ matplotlib.rcParams['font.family'] = "serif"
 from matplotlib import ticker
 from matplotlib.ticker import ScalarFormatter
 
-pops = ['A','B','C','D']
-a = [r'a = 4',r'a = 4',r'a = 4',r'a = 4']
-b = [r'b = 1',r'b = 2',r'b = 3',r'b = 4']
-c = [r'c = 0.5',r'c = 0.5',r'c = 0.5',r'c = 0.5']
-ds = [0.01, 0.1, 0.5, 1.0]
 
-labels = ['Susceptible','Infected','Resistant']
-colors = ['yellowgreen','indianred','dodgerblue']
+def true_gs_energy(s):
+	return [1.41677428435]*len(s)
 
-plt.figure(figsize=(6,6))
-fig = plt.figure(1)
-axes = plt.gca()
-axes.set_xlim([0,10])
-axes.set_ylim([0,2])
-axes.tick_params(labelsize=12)
+methods = ['srg','srg_magnus','imsrg','imsrg_magnus']
+labels = [r'SRG',r'Magnus SRG',r'IMSRG(2)',r'Magnus IMSRG(2)']
+energy_col = [2,2,1,1]
+offdiag_col = [1,1,5,5]
+
+ds = [0.5,0.1,0.05,0.01,0.005,0.001]
+colors = ['indianred','darkorange','yellowgreen','seagreen','dodgerblue','darkviolet']
 
 
-for i in range(0,4):
+# make flow plot for each method
+for i in range(len(methods)):
 
-	srg = "../data/srg_euler_"+str(j)+"_flow.dat"
-	srg_mag = "../data/srg_magnus_euler_"+str(j)+"_flow.dat"
-	imsrg = "../data/imsrg_euler_"+str(j)+"_flow.dat"
-	imsrg_mag = "../data/imsrg_magnus_euler_"+str(j)+"_flow.dat"
+	plt.figure(figsize=(6,6))
+	fig = plt.figure(1)
+	axes = plt.gca()
+	axes.set_xlim([0,6])
+	axes.set_ylim([1.38,1.52])
+	axes.tick_params(labelsize=12)
 
-	plt.plot
-	
-	plt.plot(stats[0],stats[1],linewidth=1,linestyle='-',color=colors[0],label=labels[0])
-	plt.plot(stats[0],stats[3],linewidth=1,linestyle='-',color=colors[1],label=labels[1])
-	plt.plot(stats[0],stats[5],linewidth=1,linestyle='-',color=colors[2],label=labels[2])
+	# plot energy vs. flowparam for all step sizes
+	for j in range(len(ds)):
 
-	plt.plot(stats[0],stats[1],linewidth=1,linestyle='-',color='k',label='Average')
-	plt.plot(stats[0],stats[3],linewidth=1,linestyle='-',color='k')
-	plt.plot(stats[0],stats[5],linewidth=1,linestyle='-',color='k')
+		filename = '../data/'+methods[i]+'_euler_'+str(ds[j])+'_flow.dat'
+		data = np.loadtxt(filename,unpack=True)
+		plt.plot(data[0],data[energy_col[i]],linewidth=2,linestyle='-',color=colors[j],label=r'$\delta s =$ '+str(ds[j]))
 
+	# plot analytic ground state energy
+	s = np.arange(0,10,0.1)
+	plt.plot(s,true_gs_energy(s),linewidth=2,linestyle='--',color='black',label=r'True g.s. energy')
 
 	plt.legend(loc=1, shadow=True, fontsize=12)
-	plt.xlabel(r'Time', fontsize=12, weight='normal', family='serif')
-	plt.ylabel(r'Number of People', fontsize=12, weight='normal', family='serif')
-	plt.title(r'SIRS Model for Population '+pops[i]+' (100 Samples)', fontsize=12, weight='normal', family='serif')
-	#plt.grid()
+	plt.xlabel(r'Flow Parameter $s$', fontsize=12, weight='normal', family='serif')
+	plt.ylabel(r'Ground State Energy (MeV)', fontsize=12, weight='normal', family='serif')
+	plt.title(labels[i]+r' Flow (Euler)', fontsize=12, weight='normal', family='serif')
 	plt.tight_layout()
 
-	figname = 'trials_'+pops[i]+'100.png'
+	figname = methods[i]+'_euler_flow.png'
 	plt.savefig(figname, format='png')
 	os.system('okular '+figname)
 	plt.clf()
-
 

@@ -253,7 +253,7 @@ class Solver:
 		'''
 
 	
-	################### IM-SRG(2) ###################
+	################### IMSRG(2) ###################
 
 	def imsrg_derivative(self, t, y):
 
@@ -351,7 +351,7 @@ class Solver:
 		'''
 
 
-	############## IM-SRG(2) w/ Magnus ##############
+	############## IMSRG(2) w/ Magnus ##############
 
 	def calc_dOmega(self):
 
