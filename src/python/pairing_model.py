@@ -27,5 +27,5 @@ class PairingModel:
 		# store exact eigenvalues
 		self.energies = linalg.eigvalsh(self.hamiltonian)
 
-		#print('\nTrue ground state energy = ', self.energies[0], '\n')
+		print('True ground state energy = ', self.energies[0])
 

@@ -36,7 +36,7 @@ class Solver:
 		self.normal_order()
 
 		# limit the number of lines written to file
-		self.limit = 200
+		self.limit = 1000
 		self.s_iter = 0
 		if (smax/ds) <= self.limit:
 			self.s_write = np.arange(0,smax,ds)
@@ -45,7 +45,6 @@ class Solver:
 		else:
 			f = 0.25
 			self.s_write = np.append(np.arange(0,f*smax,2.0*f*smax/self.limit),np.arange(f*smax,smax,2*(1-f)*smax/self.limit))
-
 
 		'''
 		print('='*60)
@@ -90,8 +89,8 @@ class Solver:
 		self.Hod = self.H-self.Hd
 		y0 = reshape(self.H,-1)
 
-		# store initial size of off-diagonal
-		Hod0 = linalg.norm(self.Hod)
+		# store initial "ground state energy"
+		E0 = self.Hd[0,0].copy()
 		
 		if self.euler_option:
 
@@ -101,7 +100,7 @@ class Solver:
 			while s < self.smax:
 
 				# write to file
-				if (self.s_iter < self.limit) and (abs(s-self.s_write[self.s_iter]) < 0.5*self.ds):
+				if (self.s_iter < self.limit) and (abs(s-self.s_write[self.s_iter]) <= 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						   .format(s,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
 					self.s_iter += 1
@@ -110,9 +109,13 @@ class Solver:
 				ys += self.ds*self.srg_derivative(s,ys)
 				s += self.ds
 
+				# safe-guards
 				if (self.s_iter >= self.limit): break
-				if (linalg.norm(self.Hod) > Hod0):
-					print("Diverging!")
+				if (self.Hd[0,0] > E0):
+					print('E > E0 at s = {:8.5f}!'.format(s))
+					break
+				if (self.Hd[0,0] < 0.0):
+					print('E < 0 at s = {:8.5f}'.format(s))
 					break
 
 
@@ -195,6 +198,9 @@ class Solver:
 		self.Omega = np.zeros((6,6))
 		y0 = reshape(self.Omega,-1)
 
+		# store initial "ground state energy"
+		E0 = self.Hd[0,0].copy()
+		
 		# integrate
 		if self.euler_option:
 
@@ -202,14 +208,25 @@ class Solver:
 			s = 0.0
 
 			while s < self.smax:
-				if (self.si < len(self.s_write)) and (abs(s-self.s_write[self.si]) < 0.5*self.ds):
+
+				# write to file
+				if (self.s_iter < self.limit) and (abs(s-self.s_write[self.s_iter]) <= 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						   .format(s,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
-					self.si += 1
-				y = self.srg_magnus_derivative(s,ys)
-				ys += self.ds*y
+					self.s_iter += 1
+
+				# euler step
+				ys += self.ds*self.srg_magnus_derivative(s,ys)
 				s += self.ds
-				if(linalg.norm(self.Hod) < self.tolerance): break
+
+				# safe-guards
+				if (self.s_iter >= self.limit): break
+				if (self.Hd[0,0] > E0):
+					print('E > E0 at s = {:8.5f}!'.format(s))
+					break
+				if (self.Hd[0,0] < 0.0):
+					print('E < 0 at s = {:8.5f}'.format(s))
+					break
 
 		else:
 
@@ -218,10 +235,10 @@ class Solver:
 			solver.set_initial_value(y0, 0.0)
 
 			while solver.successful() and solver.t < self.smax:
-				if (self.si < len(self.s_write)) and (abs(solver.t-self.s_write[self.si]) < 0.5*self.ds):
+				if (self.s_iter < len(self.s_write)) and (abs(solver.t-self.s_write[self.si]) < 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						   .format(solver.t,linalg.norm(self.Hod),self.Hd[0,0],self.Hd[1,1],self.Hd[2,2],self.Hd[3,3],self.Hd[4,4],self.Hd[5,5]))
-					self.si += 1
+					self.s_iter += 1
 				ys = solver.integrate(self.smax, step=True)
 				solver.integrate(solver.t+self.ds)
 				if linalg.norm(self.Hod) < self.tolerance: break
@@ -282,6 +299,7 @@ class Solver:
 		self.calc_eta()
 		self.calc_dH()
 
+		
 		# integrate
 		if self.euler_option:
 
@@ -289,13 +307,25 @@ class Solver:
 			s = 0.0
 
 			while s < self.smax:
-				if (self.si < len(self.s_write)) and (abs(s-self.s_write[self.si]) < 0.5*self.ds):
+
+				# write to file
+				if (self.s_iter < self.limit) and (abs(s-self.s_write[self.s_iter]) <= 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						   .format(s,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm()))
-					self.si += 1
+					self.s_iter += 1
+
+				# euler step
 				ys += self.ds*self.imsrg_derivative(s,ys)
 				s += self.ds
-				if(abs(self.dE/self.E) < self.tolerance): break
+
+				# safe-guards
+				if (self.s_iter >= self.limit): break
+				if (self.E > self.E0):
+					print('E > E0 at s = {:8.5f}!'.format(s))
+					break
+				if (self.E < 0.0):
+					print('E < 0 at s = {:8.5f}'.format(s))
+					break
 
 		else:
 
@@ -423,15 +453,27 @@ class Solver:
 			s = 0.0
 
 			while s < self.smax:
-				if (self.si < len(self.s_write)) and (abs(s-self.s_write[self.si]) < 0.5*self.ds):
+
+				# write to file
+				if (self.s_iter < self.limit) and (abs(s-self.s_write[self.s_iter]) <= 0.5*self.ds):
 					outfile.write('{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}{:<15.8f}\n' \
 						   .format(s,self.E,self.dE,linalg.norm(self.eta2B),self.fod_norm(),self.Gammaod_norm(),linalg.norm(self.Omega2B)))
-					self.si += 1
+					self.s_iter += 1
+
+				# euler step
 				ys += self.ds*self.imsrg_magnus_derivative(s,ys)
 				s += self.ds
 				self.calc_H()
 				self.calc_dH()
-				if(abs(self.dE/self.E) < self.tolerance): break
+
+				# safe-guards
+				if (self.s_iter >= self.limit): break
+				if (self.E > self.E0):
+					print('E > E0 at s = {:8.5f}!'.format(s))
+					break
+				if (self.E < 0.0):
+					print('E < 0 at s = {:8.5f}'.format(s))
+					break
 
 		else:
 
