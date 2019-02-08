@@ -1,10 +1,10 @@
-#include "fermi_system.h"
+#include "boson_system.h"
 
-CFermiSystem::CFermiSystem(int dimension, int number_fermions, int max_variation, double position_step, 
+CBosonSystem::CBosonSystem(int dimension, int number_bosons, int max_variation, double position_step, 
 	                       double alpha0, double alphaf, double beta0, double betaf){
 
 	dim_ = dimension;
-	N_ = number_fermions;
+	N_ = number_bosons;
 	max_ = max_variation;
 	step_ = position_step;
 	psi_ = 0.0;
@@ -16,10 +16,9 @@ CFermiSystem::CFermiSystem(int dimension, int number_fermions, int max_variation
 	beta_ = linspace(beta0,betaf,max_);
 	E_.zeros(max_,max_);
 	E_err_.zeros(max_,max_);
-
 }
 
-void CFermiSystem::montecarlo_sampling(int number_MC_cycles, string filename){
+void CBosonSystem::montecarlo_sampling(int number_MC_cycles, string filename){
 
 	// open file
 	ofstream outfile;
@@ -81,7 +80,7 @@ void CFermiSystem::montecarlo_sampling(int number_MC_cycles, string filename){
 	outfile.close();
 }
 
-void CFermiSystem::random_initial_positions(){
+void CBosonSystem::random_initial_positions(){
 
 
 	for(int i = 0; i < N_; ++i){
@@ -91,7 +90,7 @@ void CFermiSystem::random_initial_positions(){
 	}
 }
 
-void CFermiSystem::random_trial_positions(){
+void CBosonSystem::random_trial_positions(){
 
 	r_new_ = zeros<mat>(max_,max_);
 
@@ -102,8 +101,8 @@ void CFermiSystem::random_trial_positions(){
 	}
 }
 
-
-double CFermiSystem::calc_trial_wavefunction(mat r, double alpha, double beta){
+// two (more?) electrons in harmonic oscillator potential
+double CBosonSystem::calc_trial_wavefunction(mat r, double alpha, double beta){
 
 	// slater determinant
 	double R2 = 0.0;
@@ -128,7 +127,7 @@ double CFermiSystem::calc_trial_wavefunction(mat r, double alpha, double beta){
 	return psi;
 }
 
-double CFermiSystem::calc_local_energy(double alpha, double beta){
+double CBosonSystem::calc_local_energy(double alpha, double beta){
 
 	double omega2 = 1.0; // harmonic oscillator angular frequency squared
 	double h = 0.001, h2 = h*h;
@@ -180,7 +179,7 @@ double CFermiSystem::calc_local_energy(double alpha, double beta){
 	return EL_kinetic+EL_potential;
 }
 
-double CFermiSystem::rand01_(){
+double CBosonSystem::rand01_(){
 
 	uniform_real_distribution<double> dist(0.0,1.0);
 	return dist(rng_);
