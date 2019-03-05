@@ -101,10 +101,10 @@ void CBosonSystem::random_trial_positions(){
 	}
 }
 
-// two (more?) electrons in harmonic oscillator potential
+// need to change this for bosons
 double CBosonSystem::calc_trial_wavefunction(mat r, double alpha, double beta){
 
-	// slater determinant
+	// bosons in elliptical harmonic oscillator
 	double R2 = 0.0;
 	for(int i = 0; i < N_; ++i){
 		for(int j = 0; j < dim_; ++j){
@@ -113,7 +113,7 @@ double CBosonSystem::calc_trial_wavefunction(mat r, double alpha, double beta){
 	}
 	double psi = exp(-0.5*alpha*R2);
 
-	// jastrow factor
+	// interaction
 	for(int i1 = 0; i1 < N_-1; ++i1){
 		for(int i2 = i1+1; i2 < N_; ++i2){
 			R2 = 0.0;

@@ -1,5 +1,5 @@
-#ifndef BOSON_SYSTEM_H
-#define BOSON_SYSTEM_H
+#ifndef FERMION_SYSTEM_H
+#define FERMION_SYSTEM_H
 
 #include <iostream>
 #include <cmath>
@@ -12,7 +12,7 @@
 using namespace std;
 using namespace arma;
 
-class CBosonSystem{
+class CFermionSystem{
 
 private:
 
@@ -26,9 +26,9 @@ public:
 	vec alpha_, beta_;
 	mat r_, r_new_, E_, E_err_;
 
-	CBosonSystem(int dimension, int number_bosons, int max_variation, double position_step, 
+	CFermionSystem(int dimension, int number_bosons, int max_variation, double position_step, 
 		         double alpha0, double alphaf, double beta0, double betaf);
-	~CBosonSystem(){}
+	~CFermionSystem(){}
 	
 	void montecarlo_sampling(int number_MC_cycles, string filename);
 	void random_initial_positions();
