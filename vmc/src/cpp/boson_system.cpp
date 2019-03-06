@@ -1,5 +1,71 @@
 #include "boson_system.h"
 
+CBosonSystem::CBosonSystem(int dim, int number_bosons, double hard_core_diameter, vec omega){
+
+	dim_ = dim;
+	N_ = number_bosons;
+	a_ = hard_core_diameter;
+	r_.zeros(N_,dim_);            // positions
+	alpha_.zeros(dim_);           // variational parameters
+
+	omega2_ = omega % omega;      // frequencies squared
+	if(omega.n_elem != dim){
+		cout << "WARNING: number of frequencies do not match dimension." << endl;
+	}
+}
+
+// random number generator
+double CBosonSystem::rand01_(){
+
+	uniform_real_distribution<double> dist(0.0,1.0);
+	return dist(rng_);
+}
+
+// distance between ith and jth bosons
+double CBosonSystem::distance(mat r, int i, int j){
+
+	vec rij = r.row(i)-r.row(j);
+
+	return norm(rij,2);
+}
+
+// calculate trial wavefunction
+double CBosonSystem::trial_wavefunction(mat r, vec alpha){
+
+	double psi = 1.0, sum = 0.0, rij;
+	vec ri2;
+
+	// no correlation part for a=0
+	if(a_ > 0.0){
+		for(int i = 0; i < N_; ++i){
+			for(int j = 0; j < N_; ++j){
+				if(i != j){
+
+					rij = distance(r,i,j);
+
+					if(rij <= a_) return 0.0;
+					else psi *= 1.0-a_/rij;
+				}
+			}
+		}
+	}
+
+	// elliptical harmonic oscillator part
+	for(int i = 0; i < N_; ++i){
+
+		ri2 = r.row(i) % r.row(i);
+		sum += norm(dot(alpha,ri2));
+	}
+	psi *= exp(-sum);
+
+	return psi;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "boson_system.h"
+
 CBosonSystem::CBosonSystem(int number_bosons, int max_variation, double position_step, double mass, double hard_core_diameter,
 	                       double omega_xy, double omega_z, double alpha0, double alphaf, double beta0, double betaf){
 
