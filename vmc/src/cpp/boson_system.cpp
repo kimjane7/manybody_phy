@@ -88,7 +88,6 @@ void CBosonSystem::montecarlo_sampling(int number_MC_cycles, string filename){
 
 void CBosonSystem::random_initial_positions(){
 
-
 	for(int i = 0; i < N_; ++i){
 		for(int j = 0; j < dim_; ++j){
 			r_(i,j) = step_*(rand01_()-0.5);

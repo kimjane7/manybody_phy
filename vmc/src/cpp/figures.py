@@ -14,12 +14,12 @@ axes = plt.gca()
 axes.tick_params(labelsize=12)
 
 max_variation = [20]
-MC_cycles = [10000,50000,100000,500000]
+MC_cycles = [10000]
 
 for i in max_variation:
 	for j in MC_cycles:
 
-		name = "quantumdots_"+str(i)+"_"+str(j)
+		name = "data/bosons_"+str(i)+"_"+str(j)
 		data = np.loadtxt(name+".dat",unpack=True)
 		X,Y = np.meshgrid(np.unique(data[0]),np.unique(data[1]))
 		Z = data[2].reshape((i,i))
