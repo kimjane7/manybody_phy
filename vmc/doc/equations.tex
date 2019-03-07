@@ -1,0 +1,79 @@
+\documentclass[12pt]{article}
+\pdfoutput=1
+\usepackage{bm}% bold math
+\usepackage{graphicx}
+\graphicspath{}
+%\usepackage{tabularx}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{mathdots}
+\usepackage{booktabs}
+\setlength{\heavyrulewidth}{1.5pt}
+\setlength{\abovetopsep}{4pt}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{nicefrac}
+\usepackage{subcaption}
+\newenvironment{psmallmatrix}
+  {\left[\begin{matrix}}
+  {\end{matrix}\right]}
+  \usepackage{listings}
+
+
+\begin{document}
+
+\begin{center}
+\begin{large}
+BOSONS
+\end{large}
+\end{center}
+
+\noindent Hamiltonian of $N$ $D$-dimensional bosons in harmonic oscillator potential with hard-sphere interaction ($\hbar = m = 1$):
+
+\begin{align}
+&\hat{H} = \sum_{i=1}^N \Big\{ -\frac{1}{2}\nabla_i^2 + \frac{1}{2}(\omega_1^2r_{i,1}^2+\cdots+\omega_{D}^2r_{i,D}^2) \Big\} + \sum_{i<j}^N V_{int}(\vec{r_i},\vec{r_j}),\\
+&V_{int}(\vec{r_i},\vec{r_j}) =\left\{
+                \begin{array}{ll}
+                  \infty, \ r_{ij} \leq a \\
+                  0, \ \ \ r_{ij} > a \\
+                \end{array}
+              \right.
+\end{align}
+
+\noindent Store the squares of the harmonic oscillator frequencies in a vector of size $D$ so we can write $\hat{H}$ as:
+\begin{align}
+&\hat{H} = \frac{1}{2} \sum_{i=1}^N \Big\{ -\nabla_i^2 + \vec{\omega^2}\cdot \vec{r_i^2} \Big\},\\
+&\vec{\omega^2} =\vec{\omega} \ \% \ \vec{\omega} =  \langle \omega_1^2,\cdots, \omega_D^2 \rangle\\
+&\vec{r_i^2} = \vec{r_i} \ \% \ \vec{r_i} =  \langle r_{i,1}^2,\cdots, r_{i,D}^2 \rangle\\
+\end{align}
+
+\noindent The interaction is taken care of by forcing the trial wavefunction to vanish if any two bosons become separated by a distance less than $a$. Trial wavefunction:
+
+\begin{align}
+&\Psi_T(\vec{R}) = \Big\{ \prod_{i=1}^N \exp(-\vec{\alpha}\cdot \vec{r_i^2} ) \Big\} \Big\{ \prod_{i<j}^N \exp \left( \ln \left( 1-\frac{a}{r_{ij}}\right) \right) \Big\}= \exp \left( p(\vec{\alpha},\vec{R}) + q(\vec{R}) \right)\\
+&p(\vec{\alpha},\vec{R})= - \sum_{i=1}^N \vec{\alpha}\cdot\vec{r_i^2}\\
+&q(\vec{R}) = \sum_{i<j}^N  \ln \left( 1-\frac{a}{r_{ij}}\right)
+\end{align}
+
+\noindent The local energy is defined as
+\begin{align}
+E_L(\vec{R}) = \frac{1}{\Psi_T}\hat{H}\Psi_T 
+\end{align}
+
+\noindent We need the following derivatives to obtain the analytical form of the local energy:
+\begin{align*}
+\frac{1}{\Psi_T}\nabla_i^2 \Psi_T &= \nabla_i^2 p + \nabla_i^2 q + (\nabla_i p + \nabla_i q)^2\\
+&\nabla_i p = -2 \vec{\alpha} \ \% \ \vec{r_i}\\
+&\nabla_i^2 p = -2 \vec{\alpha} \cdot \vec{\mathbbm{1}}\\
+&\nabla_i q = \sum_{j \neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a) }(\vec{r_i}-\vec{r_j})\\
+&\nabla_i^2 q = \nabla_i \cdot \left( \sum_{j \neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a)} (\vec{r_i}-\vec{r_j}) \right) \\
+& \hspace*{7mm} = \sum_{d=1}^D \frac{\text{d}}{\text{d}r_{i,d}} \left( \sum_{j \neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a) }(r_{i,d}-r_{j,d}) \right) \\
+& \hspace*{7mm} = \sum_{j\neq i}^N \sum_{d=1}^D \frac{\text{d}}{\text{d}r_{i,d}} \left( \frac{a}{r_{ij}^2(r_{ij}-a) }(r_{i,d}-r_{j,d}) \right) \\
+& \hspace*{7mm} = \sum_{j\neq i}^N \sum_{d=1}^D  \left( -\frac{a(r_{i,d}-r_{j,d})^2}{r_{ij}^4(r_{ij}-a)^2} (3r_{ij}-2a) + \frac{a}{r_{ij}^2(r_{ij}-a)}\right) \\
+\end{align*}
+
+
+\end{document}
