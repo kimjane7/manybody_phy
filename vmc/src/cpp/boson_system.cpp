@@ -7,6 +7,8 @@ CBosonSystem::CBosonSystem(int dim, int number_bosons, double hard_core_diameter
 	a_ = hard_core_diameter;
 	r_.zeros(N_,dim_);            // positions
 	alpha_.zeros(dim_);           // variational parameters
+	qforce_.zeros(N_,dim_);		  // quantum force
+	step_ = 1.0; 				  // position step size
 
 	omega2_ = omega % omega;      // frequencies squared
 	if(omega.n_elem != dim){
@@ -61,6 +63,68 @@ double CBosonSystem::trial_wavefunction(mat r, vec alpha){
 	return psi;
 }
 
+// calculate local energy
+double CBosonSystem::local_energy(mat r, vec alpha){
+
+	double EL = 0.0, sum, rij;
+	vec one = ones<vec>(dim_);
+	vec Rij = zeros<vec>(dim_);
+
+	// kinetic energy part
+	// -0.5 del^2 p
+	EL += N_*dot(alpha,one);
+
+
+	// -0.5 del^2 q
+	for(int i = 0; i < N_-1; ++i){
+		for(int j = i+1; j < N_; ++j){
+
+			rij = distance(r,i,j);
+			Rij = r.row(j)-r.row(i);
+
+			EL += a_*(3.0*rij-2.0*a_)*pow(dot(Rij,one)/(rij*rij*(rij-a_)),2.0);
+			EL += -a_*dot(one,one)/(rij*rij*(rij-a_));
+		}
+	}
+
+	// -0.5 (del p + del q)^2
+	for(int i = 0; i < N_; ++i){
+
+		sum = -2.0*dot(alpha,r.row(i))
+		for(int j = 0; j < N_; ++j){
+
+			rij = distance(r,i,j);
+			Rij = r.row(j)-r.row(i);
+
+			sum += a_*dot(Rij,one)/(rij*rij*(rij-a_));
+		}
+
+		EL += -0.5*sum*sum;
+	}
+
+	// harmonic oscillator part
+	for(int i = 0; i < N_; ++i){
+		EL += 0.5*dot(omega2_,r.row(i)%r.row(i));
+	}
+
+	return EL;
+}
+
+// calculate quantum force
+void CBosonSystem::quantum_force(mat r, vec alpha){
+
+	
+}
+
+// set random initial positions
+void CBosonSystem::random_initial_positions(){
+
+	for(int i = 0; i < N_; ++i){
+		for(int j = 0; j < dim_; ++j){
+			r_(i,j) = step_*(rand01_()-0.5);
+		}
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
