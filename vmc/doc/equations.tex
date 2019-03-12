@@ -73,7 +73,80 @@ E_L(\vec{R}) = \frac{1}{\Psi_T}\hat{H}\Psi_T
 & \hspace*{7mm} = \sum_{d=1}^D \frac{\text{d}}{\text{d}r_{i,d}} \left( \sum_{j \neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a) }(r_{i,d}-r_{j,d}) \right) \\
 & \hspace*{7mm} = \sum_{j\neq i}^N \sum_{d=1}^D \frac{\text{d}}{\text{d}r_{i,d}} \left( \frac{a}{r_{ij}^2(r_{ij}-a) }(r_{i,d}-r_{j,d}) \right) \\
 & \hspace*{7mm} = \sum_{j\neq i}^N \sum_{d=1}^D  \left( -\frac{a(r_{i,d}-r_{j,d})^2}{r_{ij}^4(r_{ij}-a)^2} (3r_{ij}-2a) + \frac{a}{r_{ij}^2(r_{ij}-a)}\right) \\
+& \hspace*{7mm} = \sum_{j\neq i}^N \left( \frac{aD}{r_{ij}^2(r_{ij}-a)} -\sum_{d=1}^D 
+\frac{a(r_{i,d}-r_{j,d})^2}{r_{ij}^4(r_{ij}-a)^2} (3r_{ij}-2a)  \right)\\
+& \hspace*{7mm} = \sum_{j\neq i}^N \left( \frac{aD}{r_{ij}^2(r_{ij}-a)} -
+\frac{a(3r_{ij}-2a)}{r_{ij}^4(r_{ij}-a)^2} \left(  \sum_{d=1}^D  (r_{i,d}-r_{j,d})^2 \right)  \right)\\
+& \hspace*{7mm} = \sum_{j\neq i}^N \left( \frac{aD}{r_{ij}^2(r_{ij}-a)} -
+\frac{a(3r_{ij}-2a)}{r_{ij}^2(r_{ij}-a)^2}  \right)\\
+& \hspace*{7mm} = \sum_{j\neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a)} \left( D - \frac{3r_{ij}-2a}{r_{ij}-a}   \right)\\
+& \hspace*{7mm} = \sum_{j\neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a)} \left( \frac{Dr_{ij}-Da -3r_{ij}+2a}{r_{ij}-a}   \right)\\
+& \hspace*{7mm} = \sum_{j\neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a)} \left( \frac{(D-3)r_{ij}+(2-D)a}{r_{ij}-a}   \right)\\
+& \hspace*{7mm} = \sum_{j\neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a)^2} \left( (D-3)r_{ij}+(2-D)a   \right)\\
+& (\nabla_i p + \nabla_i q)^2 = \left( -2 \vec{\alpha} \ \% \ \vec{r_i} + \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right)^2\\
+& \hspace*{23mm} = 4 \vec{\alpha^2}\cdot\vec{r_i^2} - 4a \sum_{j\neq i}^N \frac{(\vec{\alpha} \ \% \ \vec{r_i}) \cdot (\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} + \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right)
 \end{align*}
+
+
+
+Putting all this together...
+\begin{align*}
+E_L(\vec{R}) &= \frac{1}{\Psi_T} 
+\left[ \sum_{i=1}^N \Big\{ -\frac{1}{2}\nabla_i^2 + \frac{1}{2}(\omega_1^2r_{i,1}^2+\cdots+\omega_{D}^2r_{i,D}^2) \Big\} \right] \Psi_T \\
+&= \frac{1}{2}  \sum_{i=1}^N \Big\{ -\frac{1}{\Psi_T} \nabla_i^2 \Psi_T + \vec{\omega^2} \cdot \vec{r_i^2}   \Big\}\\
+&= \frac{1}{2} \sum_{i=1}^N \Big \{ - \nabla_i^2 p - \nabla_i^2 q - (\nabla_i p + \nabla_i q)^2 + \vec{\omega^2} \cdot \vec{r_i^2}   \Big\}\\
+&= \frac{1}{2} \sum_{i=1}^N \Big \{ 2\vec{\alpha}\cdot \vec{\mathbbm{1}} - \sum_{j\neq i}^N \frac{a}{r_{ij}^2(r_{ij}-a)^2} \left( (D-3)r_{ij}+(2-D)a   \right) - \\
+& \hspace*{5mm} \left[ 4 \vec{\alpha^2}\cdot\vec{r_i^2} - 4a \sum_{j\neq i}^N \frac{(\vec{\alpha} \ \% \ \vec{r_i}) \cdot (\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} + \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \right] + \vec{\omega^2} \cdot \vec{r_i^2}   \Big\}\\
+& = N\vec{\alpha}\cdot\vec{\mathbbm{1}} - \frac{1}{2}\sum_{i=1}^N \sum_{j\neq i}^N \frac{a((D-3)r_{ij}+(2-D)a)}{r_{ij}^2(r_{ij}-a)^2} - 2\sum_{i=1}^N \vec{\alpha^2}\cdot \vec{r_i^2} + 2a \sum_{i=1}^N \sum_{j \neq i}^N \frac{(\vec{\alpha} \ \% \ \vec{r_i})(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)}\\
+& \hspace*{5mm} -\frac{1}{2} \sum_{i=1}^N \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) + \frac{1}{2}\sum_{i=1}^N \vec{\omega^2}\cdot \vec{r_i^2}\\
+& = N\vec{\alpha}\cdot\vec{\mathbbm{1}} - 2\sum_{i=1}^N \vec{\alpha^2}\cdot \vec{r_i^2} 
++ \sum_{i<j}^N \left[ \frac{a((3-D)r_{ij}+(D-2)a)}{r_{ij}^2(r_{ij}-a)^2} + \frac{4a(\vec{\alpha} \ \% \ \vec{r_i})(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right]\\
+& \hspace*{5mm} -\frac{1}{2} \sum_{i=1}^N \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) + \frac{1}{2}\sum_{i=1}^N \vec{\omega^2}\cdot \vec{r_i^2}\\
+& = N\vec{\alpha}\cdot\vec{\mathbbm{1}} - 2\sum_{i=1}^N \vec{\alpha^2}\cdot \vec{r_i^2} 
++ \sum_{i<j}^N \frac{a}{r_{ij}^2(r_{ij}-a)} \left[ 
+\frac{(3-D)r_{ij}+(D-2)a}{r_{ij}-a} + 4(\vec{\alpha} \ \% \ \vec{r_i})(\vec{r_i}-\vec{r_j})
+\right]\\
+& \hspace*{5mm} -\frac{1}{2} \sum_{i=1}^N \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) + \frac{1}{2}\sum_{i=1}^N \vec{\omega^2}\cdot \vec{r_i^2}\\
+\end{align*}
+
+The quantum force on the $i$th particle is defined as 
+\begin{align}
+\vec{F}_i(\vec{R}) = 2 \frac{1}{\Psi_T} \nabla_i \Psi_T.
+\end{align}
+
+Using the derivatives we have already calculated, we have
+\begin{align*}
+\vec{F}_i(\vec{R}) &= 2 ( \nabla_i p + \nabla_i q)\\
+&= -4\vec{\alpha} \ \% \ \vec{r_i} + 2 \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)}  \\
+\end{align*}
+
+\noindent The Langevin and Fokker-Planck equations give a new position $y$ from the old position $x$:
+\begin{align}
+y = x + d\Delta tF(x) + \xi \sqrt{\Delta t},
+\end{align}
+where $d=0.5$ is the diffusion constant and $\Delta t \in [0.001,0.01]$ is a chosen time step. \\
+
+The transition probability is given by the Green's function
+\begin{align}
+G(y,x)=\frac{1}{(4\pi d \Delta t)^{3N/2}} \exp \left( -\frac{(y-x-d\Delta t F(x))^2}{4 d \Delta t} \right),
+\end{align}
+so that the Metropolis-Hastings acceptance ratio is
+\begin{align}
+A(y,x) = \min \{ 1, P(y,x) \},
+\end{align}
+where 
+\begin{align*}
+P(y,x) &= \frac{G(x,y) | \Psi_T(y) | ^2}{G(y,x) | \Psi_T(x) | ^2}\\
+&= \exp \left( -\frac{(x-y-d\Delta t F(y))^2}{4 d \Delta t} \right) \exp \left( \frac{(y-x-d\Delta t F(x))^2}{4 d \Delta t} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( -\frac{(x-y)^2-2(x-y)d\Delta t F(y) + d^2 \Delta t^2 F(y)^2}{4d\Delta t} \right)\\
+& \ \ \  \times \exp \left( \frac{(y-x)^2-2(y-x)d\Delta t F(x) + d^2 \Delta t^2 F(x)^2}{4d\Delta t} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( \frac{2(x-y)d\Delta t (F(y)+F(x)) + d^2 \Delta t^2 (F(x)^2-F(y)^2)}{4d\Delta t} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( \frac{2(x-y) (F(y)+F(x)) + d \Delta t (F(x)^2-F(y)^2)}{4} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( \frac{1}{2}(x-y) (F(y)+F(x)) + \frac{1}{4} d \Delta t (F(x)^2-F(y)^2) \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+\end{align*}
+
+
+
 
 
 \end{document}

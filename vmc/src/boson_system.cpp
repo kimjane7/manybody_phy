@@ -6,6 +6,11 @@ CBosonSystem::CBosonSystem(int dimension, int number_bosons, double hard_core_di
 	N_ = number_bosons;
 	a_ = hard_core_diameter;
 
+	timestep_ = 0.05;			  // Fokker-Planck equation parameters
+	diff_coeff_ = 0.5;
+	psi_ = 0.0;					  // trial wave function
+	psi_new_ = 0.0;
+
 	alpha_.zeros(D_);             // variational parameters
 	r_.zeros(N_,D_);              // positions
 	r_new_.zeros(N_,D_);
@@ -21,8 +26,11 @@ CBosonSystem::CBosonSystem(int dimension, int number_bosons, double hard_core_di
 // with importance sampling
 void CBosonSystem::energy_minimization(int number_MC_cycles, vec alpha, string filename){
 
-	double diff_coeff = 0.5, timestep = 0.05; // Fokker-Planck equation parameters
-	double E = 0.0, E2 = 0.0, DeltaE = 0.0, E_err;
+	double E = 0.0, E2 = 0.0, deltaE = 0.0, E_err;
+	vec dE = zeros<vec>(D_);
+	vec deltapsi = zeros<vec>(D_);
+	vec dpsi = zeros<vec>(D_);
+	vec dpsiE = zeros<vec>(D_);
 
 	// randomly position particles
 	random_initial_positions();
@@ -34,37 +42,39 @@ void CBosonSystem::energy_minimization(int number_MC_cycles, vec alpha, string f
 	// loop over monte carlo cycles
 	for(int m = 0; m < number_MC_cycles; ++m){
 
-		// propose new trial positions
 		for(int i = 0; i < N_; ++i){
-			for(int d = 0; d < D_; ++d){
-				
+
+			// move ith particle
+			random_new_position(i);
+
+			// calculate new wave function and quantum force
+			psi_new_ = calc_trial_wavefunction(r_new_,alpha);
+			qforce_new_ = calc_quantum_force(r_new_,alpha);
+
+			// Metropolis-Hastings test
+			if(rand01() <= acceptance_ratio(i)){
+				r_.row(i) = r_new_.row(i);
+				qforce_.row(i) = qforce_new_.row(i);
+				psi_ = psi_new_;
 			}
 		}
 
-
-
-		////////////////////
-
-		// propose new trial positions
-		random_trial_positions();
-
-		// calculate new trial wave function
-		psi_new_ = calc_trial_wavefunction(r_new_,alpha_(a),beta_(b));
-
-		// metropolis test
-		if(rand01_() < pow(psi_new_/psi_,2.0)){
-			r_ = r_new_;
-			psi_ = psi_new_;
-			DeltaE = calc_local_energy(r_,alpha_(a),beta_(b));
-		}
-		E += DeltaE;
-		E2 += DeltaE*DeltaE;
+		// calculate energy and derivatives
+		deltaE = calc_local_energy(r_,alpha);
+		dpsi = calc_derivative_wavefunction(r_,alpha);
+		E += deltaE;
+		E2 += deltaE*deltaE;
+		deltapsi += dpsi;
+		dpsiE += dpsi*deltaE;
 	}
 
 	// calculate mean, variance, error
-	E = E/number_MC_cycles;
-	E2 = E2/number_MC_cycles;
+	E /= number_MC_cycles;
+	E2 /= number_MC_cycles;
+	dpsiE /= number_MC_cycles;
+	deltapsi /= number_MC_cycles;
 	E_err = sqrt((E2-E*E)/number_MC_cycles);
+	dE = 2.0*(dpsiE-deltapsi*E);
 }
 
 
@@ -179,14 +189,55 @@ mat CBosonSystem::calc_quantum_force(mat r, vec alpha){
 	return qforce;
 }
 
+// calculate derivative of trial wavefunction wrt variational parameters
+vec CBosonSystem::calc_derivative_wavefunction(mat r, vec alpha){
+
+	double sum;
+	vec dpsi = zeros<vec>(D_);
+
+	for(int d = 0; d < D_; ++d){
+
+		sum = 0.0;
+		for(int i = 0; i < N_; ++i){
+			sum += r(i,d)*r(i,d);
+		}
+		dpsi(d) = -sum;
+	}
+	dpsi = calc_trial_wavefunction(r,alpha)*dpsi;
+
+	return dpsi;
+}
+
 // set random initial positions
 void CBosonSystem::random_initial_positions(){
 
 	for(int i = 0; i < N_; ++i){
 		for(int j = 0; j < D_; ++j){
-			r_(i,j) = sqrt(timestep)*randnorm_();
+			r_(i,j) = sqrt(timestep_)*randnorm();
 		}
 	}
+}
+
+// get new position of ith particle
+void CBosonSystem::random_new_position(int i){
+
+	for(int d = 0; d < D_; ++d){
+		r_new_(i,d) = r_(i,d)+diff_coeff_*qforce_(i,d)*timestep_+randnorm()*sqrt(timestep_);
+	}
+}
+
+// acceptance ratio for Metropolis-Hastings algorithm
+double CBosonSystem::acceptance_ratio(int i){
+
+	double greens = 0.0;
+
+	for(int d = 0; d < D_; ++d){
+		greens += 0.5*(r_(i,d)-r_new_(i,d)(qforce_new_(i,d)+qforce_(i,d)));
+		greens += 0.25*diff_coeff_*timestep_*(pow(qforce_(i,d),2.0)-pow(qforce_new_(i,d),2.0));
+	}
+	greens = exp(greens);
+
+	return greens*psi_new_*psi_new_/(psi_*psi_);
 }
 
 // distance between ith and jth bosons
@@ -198,14 +249,14 @@ double CBosonSystem::distance(mat r, int i, int j){
 }
 
 // uniform rng
-double CBosonSystem::rand01_(){
+double CBosonSystem::rand01(){
 
 	uniform_real_distribution<double> dist(0.0,1.0);
 	return dist(rng_);
 }
 
 // normal rng
-double CBosonSystem::randnorm_(){
+double CBosonSystem::randnorm(){
 
 	normal_distribution<double> dist(0.0,1.0);
 	return dist(rng_);
@@ -271,7 +322,7 @@ void CBosonSystem::montecarlo_sampling(int number_MC_cycles, string filename){
 				psi_new_ = calc_trial_wavefunction(r_new_,alpha_(a),beta_(b));
 
 				// metropolis test
-				if(rand01_() < pow(psi_new_/psi_,2.0)){
+				if(rand01() < pow(psi_new_/psi_,2.0)){
 					r_ = r_new_;
 					psi_ = psi_new_;
 					DeltaE = calc_local_energy(r_,alpha_(a),beta_(b));
@@ -305,7 +356,7 @@ void CBosonSystem::random_initial_positions(){
 
 	for(int i = 0; i < N_; ++i){
 		for(int j = 0; j < D_; ++j){
-			r_(i,j) = step_*(rand01_()-0.5);
+			r_(i,j) = step_*(rand01()-0.5);
 		}
 	}
 }
@@ -316,7 +367,7 @@ void CBosonSystem::random_trial_positions(){
 
 	for(int i = 0; i < N_; ++i){
 		for(int j = 0; j < D_; ++j){
-			r_new_(i,j) = r_(i,j)+step_*(rand01_()-0.5);
+			r_new_(i,j) = r_(i,j)+step_*(rand01()-0.5);
 		}
 	}
 }
@@ -422,7 +473,7 @@ double CBosonSystem::calc_local_energy(mat r, double alpha, double beta){
 }
 
 
-double CBosonSystem::rand01_(){
+double CBosonSystem::rand01(){
 
 	uniform_real_distribution<double> dist(0.0,1.0);
 	return dist(rng_);
