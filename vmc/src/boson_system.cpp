@@ -1,14 +1,16 @@
 #include "boson_system.h"
 
-CBosonSystem::CBosonSystem(int dim, int number_bosons, double hard_core_diameter, vec omega){
+CBosonSystem::CBosonSystem(int dimension, int number_bosons, double hard_core_diameter, vec omega){
 
-	dim_ = dim;
+	D_ = dimension;
 	N_ = number_bosons;
 	a_ = hard_core_diameter;
-	r_.zeros(N_,dim_);            // positions
-	alpha_.zeros(dim_);           // variational parameters
-	qforce_.zeros(N_,dim_);		  // quantum force
-	step_ = 1.0; 				  // position step size
+
+	alpha_.zeros(D_);             // variational parameters
+	r_.zeros(N_,D_);              // positions
+	r_new_.zeros(N_,D_);
+	qforce_.zeros(N_,D_);		  // quantum force
+	qforce_new_.zeros(N_,D_);
 
 	omega2_ = omega % omega;      // frequencies squared
 	if(omega.n_elem != dim){
@@ -16,23 +18,58 @@ CBosonSystem::CBosonSystem(int dim, int number_bosons, double hard_core_diameter
 	}
 }
 
-// random number generator
-double CBosonSystem::rand01_(){
+// with importance sampling
+void CBosonSystem::energy_minimization(int number_MC_cycles, vec alpha, string filename){
 
-	uniform_real_distribution<double> dist(0.0,1.0);
-	return dist(rng_);
+	double diff_coeff = 0.5, timestep = 0.05; // Fokker-Planck equation parameters
+	double E = 0.0, E2 = 0.0, DeltaE = 0.0, E_err;
+
+	// randomly position particles
+	random_initial_positions();
+
+	// calculate initial wave function and quantum force
+	psi_ = calc_trial_wavefunction(r_,alpha);
+	qforce_ = calc_quantum_force(r_,alpha);
+
+	// loop over monte carlo cycles
+	for(int m = 0; m < number_MC_cycles; ++m){
+
+		// propose new trial positions
+		for(int i = 0; i < N_; ++i){
+			for(int d = 0; d < D_; ++d){
+				
+			}
+		}
+
+
+
+		////////////////////
+
+		// propose new trial positions
+		random_trial_positions();
+
+		// calculate new trial wave function
+		psi_new_ = calc_trial_wavefunction(r_new_,alpha_(a),beta_(b));
+
+		// metropolis test
+		if(rand01_() < pow(psi_new_/psi_,2.0)){
+			r_ = r_new_;
+			psi_ = psi_new_;
+			DeltaE = calc_local_energy(r_,alpha_(a),beta_(b));
+		}
+		E += DeltaE;
+		E2 += DeltaE*DeltaE;
+	}
+
+	// calculate mean, variance, error
+	E = E/number_MC_cycles;
+	E2 = E2/number_MC_cycles;
+	E_err = sqrt((E2-E*E)/number_MC_cycles);
 }
 
-// distance between ith and jth bosons
-double CBosonSystem::distance(mat r, int i, int j){
-
-	vec rij = r.row(i)-r.row(j);
-
-	return norm(rij,2);
-}
 
 // calculate trial wavefunction
-double CBosonSystem::trial_wavefunction(mat r, vec alpha){
+double CBosonSystem::calc_trial_wavefunction(mat r, vec alpha){
 
 	double psi = 1.0, sum = 0.0, rij;
 	vec ri2;
@@ -63,67 +100,115 @@ double CBosonSystem::trial_wavefunction(mat r, vec alpha){
 	return psi;
 }
 
-// calculate local energy
-double CBosonSystem::local_energy(mat r, vec alpha){
+// calculate local energy (see equations pdf in doc folder)
+double CBosonSystem::calc_local_energy(mat r, vec alpha){
 
-	double EL = 0.0, sum, rij;
-	vec one = ones<vec>(dim_);
-	vec Rij = zeros<vec>(dim_);
+	double EL = 0.0, prefactor, rij;
+	vec alpha2 = alpha%alpha;
+	vec one = ones<vec>(D_);
+	vec sum = zeros<vec>(D_);
+	vec Ri = zeros<vec>(D_);
+	vec Rj = zeros<vec>(D_);
 
-	// kinetic energy part
-	// -0.5 del^2 p
+
 	EL += N_*dot(alpha,one);
 
+	for(int i = 0; i < N_; ++i){
 
-	// -0.5 del^2 q
+		Ri = r.row(i); // check this is what i expect
+
+		EL += 0.5*dot(omega2_, Ri%Ri);  // harmonic oscillator part
+		EL -= 2.0*dot(alpha2, Ri%Ri);
+
+		for(int j = 0; j < N_; ++j){
+			if(i != j){
+
+				Rj = r.row(j);
+				rij = distance(r,i,j);
+				prefactor = a_/(rij*rij*(rij-a_));
+
+				sum += prefactor*(Ri-Rj);				
+			}
+
+		}
+
+		EL -= 0.5*dot(sum,sum);
+	}
+
 	for(int i = 0; i < N_-1; ++i){
 		for(int j = i+1; j < N_; ++j){
 
+			Rj = r.row(j);
 			rij = distance(r,i,j);
-			Rij = r.row(j)-r.row(i);
 
-			EL += a_*(3.0*rij-2.0*a_)*pow(dot(Rij,one)/(rij*rij*(rij-a_)),2.0);
-			EL += -a_*dot(one,one)/(rij*rij*(rij-a_));
+			prefactor = a_/(rij*rij*(rij-a_));
+
+			EL += prefactor*(((3.0-D_)*rij+(D_-2.0)*a)/(rij-a_)+4.0*(alpha%Ri)*(Ri-Rj));
 		}
-	}
-
-	// -0.5 (del p + del q)^2
-	for(int i = 0; i < N_; ++i){
-
-		sum = -2.0*dot(alpha,r.row(i))
-		for(int j = 0; j < N_; ++j){
-
-			rij = distance(r,i,j);
-			Rij = r.row(j)-r.row(i);
-
-			sum += a_*dot(Rij,one)/(rij*rij*(rij-a_));
-		}
-
-		EL += -0.5*sum*sum;
-	}
-
-	// harmonic oscillator part
-	for(int i = 0; i < N_; ++i){
-		EL += 0.5*dot(omega2_,r.row(i)%r.row(i));
 	}
 
 	return EL;
 }
 
-// calculate quantum force
-void CBosonSystem::quantum_force(mat r, vec alpha){
+// calculate quantum force for each particle
+mat CBosonSystem::calc_quantum_force(mat r, vec alpha){
 
-	
+	double prefactor, rij;
+	vec Ri = zeros<vec>(D_);
+	vec Rj = zeros<vec>(D_);
+	mat qforce = zeros<mat>(N_,D_);
+
+	for(int i = 0; i < N_; ++i){
+
+		Ri = r.row(i);
+
+		qforce.row(i) = -4.0*(alpha%Ri);
+
+		for(int j = 0; j < N_; ++j){
+			if(i != j){
+
+				Rj = r.row(j);
+				rij = distance(r,i,j);
+				prefactor = a_/(rij*rij*(rij-a_));
+
+				qforce.row(i) += 2.0*prefactor*(Ri-Rj);				
+			}
+		}
+	}
+
+	return qforce;
 }
 
 // set random initial positions
 void CBosonSystem::random_initial_positions(){
 
 	for(int i = 0; i < N_; ++i){
-		for(int j = 0; j < dim_; ++j){
-			r_(i,j) = step_*(rand01_()-0.5);
+		for(int j = 0; j < D_; ++j){
+			r_(i,j) = sqrt(timestep)*randnorm_();
 		}
 	}
+}
+
+// distance between ith and jth bosons
+double CBosonSystem::distance(mat r, int i, int j){
+
+	vec rij = r.row(i)-r.row(j);
+
+	return norm(rij,2);
+}
+
+// uniform rng
+double CBosonSystem::rand01_(){
+
+	uniform_real_distribution<double> dist(0.0,1.0);
+	return dist(rng_);
+}
+
+// normal rng
+double CBosonSystem::randnorm_(){
+
+	normal_distribution<double> dist(0.0,1.0);
+	return dist(rng_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,7 +218,7 @@ void CBosonSystem::random_initial_positions(){
 CBosonSystem::CBosonSystem(int number_bosons, int max_variation, double position_step, double mass, double hard_core_diameter,
 	                       double omega_xy, double omega_z, double alpha0, double alphaf, double beta0, double betaf){
 
-	dim_ = 3;
+	D_ = 3;
 	N_ = number_bosons;
 	max_ = max_variation;
 	hbar_ = 1.0;
@@ -148,8 +233,8 @@ CBosonSystem::CBosonSystem(int number_bosons, int max_variation, double position
 
 	alpha_ = linspace(alpha0,alphaf,max_);
 	beta_ = linspace(beta0,betaf,max_);
-	r_.zeros(N_,dim_);
-	r_new_.zeros(N_,dim_);
+	r_.zeros(N_,D_);
+	r_new_.zeros(N_,D_);
 	E_.zeros(max_,max_);
 	E_err_.zeros(max_,max_);
 }
@@ -219,7 +304,7 @@ void CBosonSystem::montecarlo_sampling(int number_MC_cycles, string filename){
 void CBosonSystem::random_initial_positions(){
 
 	for(int i = 0; i < N_; ++i){
-		for(int j = 0; j < dim_; ++j){
+		for(int j = 0; j < D_; ++j){
 			r_(i,j) = step_*(rand01_()-0.5);
 		}
 	}
@@ -230,7 +315,7 @@ void CBosonSystem::random_trial_positions(){
 	r_new_ = zeros<mat>(max_,max_);
 
 	for(int i = 0; i < N_; ++i){
-		for(int j = 0; j < dim_; ++j){
+		for(int j = 0; j < D_; ++j){
 			r_new_(i,j) = r_(i,j)+step_*(rand01_()-0.5);
 		}
 	}
@@ -241,7 +326,7 @@ double CBosonSystem::distance(mat r, int i, int j){
 
 	double distance = 0.0;
 
-	for(int d = 0; d < dim_; ++d){
+	for(int d = 0; d < D_; ++d){
 		distance += pow(r(i,d)-r(j,d),2.0);
 	}
 

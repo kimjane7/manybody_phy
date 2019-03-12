@@ -18,10 +18,11 @@ private:
 
 	mt19937 rng_;
 	double rand01_();
+	double randnorm_();
 
 public:
 
-	int dim_, N_, max_;
+	int D_, N_, max_;
 	double hbar_, m_, a_, step_;
 	double psi_, psi_new_, omega_xy_, omega_z_;
 	vec alpha_, beta_;
