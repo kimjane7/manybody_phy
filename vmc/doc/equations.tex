@@ -104,10 +104,23 @@ E_L(\vec{R}) &= \frac{1}{\Psi_T}
 & \hspace*{5mm} -\frac{1}{2} \sum_{i=1}^N \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) + \frac{1}{2}\sum_{i=1}^N \vec{\omega^2}\cdot \vec{r_i^2}\\
 & = N\vec{\alpha}\cdot\vec{\mathbbm{1}} - 2\sum_{i=1}^N \vec{\alpha^2}\cdot \vec{r_i^2} 
 + \sum_{i<j}^N \frac{a}{r_{ij}^2(r_{ij}-a)} \left[ 
-\frac{(3-D)r_{ij}+(D-2)a}{r_{ij}-a} + 4(\vec{\alpha} \ \% \ \vec{r_i})(\vec{r_i}-\vec{r_j})
+\frac{(3-D)r_{ij}+(D-2)a}{r_{ij}-a} + 4(\vec{\alpha} \ \% \ \vec{r_i})\cdot (\vec{r_i}-\vec{r_j})
 \right]\\
 & \hspace*{5mm} -\frac{1}{2} \sum_{i=1}^N \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) + \frac{1}{2}\sum_{i=1}^N \vec{\omega^2}\cdot \vec{r_i^2}\\
 \end{align*}
+
+\noindent For gradient descent, we need an expression for the derivative of $E_L$ with respect to the variational parameters $\vec{\alpha}$. We will only consider contributions from $b$ particles in batch $B_k$, where $k$ is chosen randomly. The variational parameters are only present in a few terms in the above expression for $E_L$, so we shall ignore the rest. 
+
+\begin{align*}
+\frac{\partial E_L}{\partial \alpha_d} 
+&= \frac{\partial}{\partial \alpha_d} \left( 
+b\vec{\alpha}\cdot \vec{\mathbbm{1}} - 2 \sum_{i \in B_k} \vec{\alpha^2}\cdot \vec{r_i^2} 
++ \sum_{i\in B_k} \frac{1}{2} \sum_{j\neq i}^N \frac{4a}{r_{ij}^2(r_{ij}-a)} (\vec{\alpha} \  \% \ \vec{r_i}) \cdot (\vec{r_i}-\vec{r_j})
+ \right)\\
+ &= b -4 \sum_{i \in B_k} \alpha_d r_{i,d}^2 +2 \sum_{i \in B_k} \sum_{j \neq i}^N \frac{a r_{i,d}(r_{i,d}-r_{j,d})}{r_{ij}^2(r_{ij}-a)}
+\end{align*}
+
+
 
 The quantum force on the $i$th particle is defined as 
 \begin{align}

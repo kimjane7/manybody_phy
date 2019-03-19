@@ -1,25 +1,65 @@
 #include "boson_system.h"
 
-CBosonSystem::CBosonSystem(int dimension, int number_bosons, double hard_core_diameter, vec omega){
+CBosonSystem::CBosonSystem(int dimension, int number_bosons, int number_epochs, int batch_size, double hard_core_diameter, vec omega){
 
 	D_ = dimension;
 	N_ = number_bosons;
+	E_ = number_epochs;
+	b_ = batch_size;
+	B_ = (int) N_/b_;	               // number of batches for SGD
 	a_ = hard_core_diameter;
 
-	timestep_ = 0.05;			  // Fokker-Planck equation parameters
+	timestep_ = 0.05;			       // Fokker-Planck equation parameters
 	diff_coeff_ = 0.5;
-	psi_ = 0.0;					  // trial wave function
+	psi_ = 0.0;					       // trial wave function
 	psi_new_ = 0.0;
 
-	alpha_.zeros(D_);             // variational parameters
-	r_.zeros(N_,D_);              // positions
+	alpha_.zeros(D_);                  // variational parameters
+	r_.zeros(N_,D_);                   // positions
 	r_new_.zeros(N_,D_);
-	qforce_.zeros(N_,D_);		  // quantum force
+	qforce_.zeros(N_,D_);	      	   // quantum force
 	qforce_new_.zeros(N_,D_);
 
-	omega2_ = omega % omega;      // frequencies squared
-	if(omega.n_elem != dim){
+	batches_.zeros(B_,b_);             // indices of batches
+	for(int k = 0; k < B_; ++k){
+		for(int l = 0; l < b_; ++l){
+			batches_(k,l) = k*b_+l;
+		}
+	}
+
+	omega2_ = omega % omega;           // frequencies squared
+	if(omega.n_elem != D_){
 		cout << "WARNING: number of frequencies do not match dimension." << endl;
+	}
+}
+
+// stochastic gradient descent
+void CBosonSystem::stochastic_gradient_descent(){
+
+	int j = 0, k;
+	double t0 = 1.0, t1 = 10.0;		  // step length parameters
+	double gammaj = t0/t1;            // step length
+	vec gradient = zeros<vec>(D_);    // gradient of energy
+
+	// loop over epochs
+	for(int e = 0; e < E_; ++e){
+
+		// loop over number of batches
+		for(int b = 0; b < B_; ++b){
+
+			// pick kth batch at random
+			k = randint(B_);
+
+			// compute gradient using the data in kth batch
+			gradient = calc_derivative_local_energy(r_,alpha_)
+
+			// compute new suggestion for alpha
+			alpha_ -= gammaj*gradient;
+
+			// update step length
+			gammaj = t0/(e*M+m+t1);
+			j += 1;
+		}
 	}
 }
 
@@ -153,7 +193,7 @@ double CBosonSystem::calc_local_energy(mat r, vec alpha){
 
 			prefactor = a_/(rij*rij*(rij-a_));
 
-			EL += prefactor*(((3.0-D_)*rij+(D_-2.0)*a)/(rij-a_)+4.0*(alpha%Ri)*(Ri-Rj));
+			EL += prefactor*(((3.0-D_)*rij+(D_-2.0)*a)/(rij-a_)+4.0*dot(alpha%Ri,Ri-Rj));
 		}
 	}
 
@@ -208,6 +248,38 @@ vec CBosonSystem::calc_derivative_wavefunction(mat r, vec alpha){
 	return dpsi;
 }
 
+// calculate derivative of local energy wrt variational parameters for batch only
+vec CBosonSystem::calc_derivative_local_energy(int batch_index, mat r, vec alpha){
+
+	int k = batch_index;
+	double sum, rij;	
+	vec dEL = zeros<vec>(D_);
+
+	for(int d = 0; d < D_; ++d){
+
+		sum = b_;
+
+		// loop through particles in batch
+		for(int l = 0; l < b_; ++l){
+
+			i = batches_(k,l);
+			sum -= 4.0*alpha(d)*r(i,d)*r(i,d);
+
+			for(int j = 0; j < N_; ++j){
+				if(i != j){
+
+					rij = distance(r,i,j);
+					sum += 2.0*a_*r(i,d)*(r(i,d)-r(j,d))/(rij*rij*(rij-a_));
+				}
+			}
+		}
+
+		dEL(d) = sum;
+	}
+
+	return dEL;
+}
+
 // set random initial positions
 void CBosonSystem::random_initial_positions(){
 
@@ -248,10 +320,17 @@ double CBosonSystem::distance(mat r, int i, int j){
 	return norm(rij,2);
 }
 
-// uniform rng
+// uniform real rng
 double CBosonSystem::rand01(){
 
 	uniform_real_distribution<double> dist(0.0,1.0);
+	return dist(rng_);
+}
+
+// uniform int rng
+double CBosonSystem::randint(int max){
+
+	uniform_int_distribution<int> dist(0,max-1);
 	return dist(rng_);
 }
 
@@ -259,222 +338,5 @@ double CBosonSystem::rand01(){
 double CBosonSystem::randnorm(){
 
 	normal_distribution<double> dist(0.0,1.0);
-	return dist(rng_);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////
-
-#include "boson_system.h"
-
-CBosonSystem::CBosonSystem(int number_bosons, int max_variation, double position_step, double mass, double hard_core_diameter,
-	                       double omega_xy, double omega_z, double alpha0, double alphaf, double beta0, double betaf){
-
-	D_ = 3;
-	N_ = number_bosons;
-	max_ = max_variation;
-	hbar_ = 1.0;
-	m_ = mass;
-	a_ = hard_core_diameter;
-	step_ = position_step;
-
-	psi_ = 0.0;
-	psi_new_= 0.0;
-	omega_xy_ = omega_xy;
-	omega_z_ = omega_z;
-
-	alpha_ = linspace(alpha0,alphaf,max_);
-	beta_ = linspace(beta0,betaf,max_);
-	r_.zeros(N_,D_);
-	r_new_.zeros(N_,D_);
-	E_.zeros(max_,max_);
-	E_err_.zeros(max_,max_);
-}
-
-void CBosonSystem::montecarlo_sampling(int number_MC_cycles, string filename){
-
-	// open file
-	ofstream outfile;
-	outfile.open(filename+"_"+to_string(max_)+"_"+to_string(number_MC_cycles)+".dat");
-	outfile << "# alpha, beta, E, E_err" << endl;
-
-	// heading
-	printf("%10s %10s %10s %10s \n\n","alpha","beta","energy","error");
-
-	// loop over various parameter values
-	for(int a = 0; a < max_; ++a){
-		for(int b = 0; b < max_; ++b){
-
-			double E = 0.0, E2 = 0.0, DeltaE = 0.0, E_err;
-
-			// randomly position particles
-			random_initial_positions();
-
-			// calculate initial wave function
-			psi_ = calc_trial_wavefunction(r_,alpha_(a),beta_(b));
-
-			// loop over monte carlo cycles
-			for(int m = 0; m < number_MC_cycles; ++m){
-
-				// propose new trial positions
-				random_trial_positions();
-
-				// calculate new trial wave function
-				psi_new_ = calc_trial_wavefunction(r_new_,alpha_(a),beta_(b));
-
-				// metropolis test
-				if(rand01() < pow(psi_new_/psi_,2.0)){
-					r_ = r_new_;
-					psi_ = psi_new_;
-					DeltaE = calc_local_energy(r_,alpha_(a),beta_(b));
-				}
-				E += DeltaE;
-				E2 += DeltaE*DeltaE;
-			}
-
-			// calculate mean, variance, error
-			E = E/number_MC_cycles;
-			E2 = E2/number_MC_cycles;
-			E_err = sqrt((E2-E*E)/number_MC_cycles);
-
-			// store results
-			E_(a,b) = E;
-			E_err_(a,b) = E_err;
-
-			// print results
-			printf("%10.3lf %10.3lf %10.3lf %10.3lf \n",alpha_(a),beta_(b),E_(a,b),E_err_(a,b));
-
-			outfile << left << setw(10) << setprecision(5) << alpha_(a);
-			outfile << left << setw(10) << setprecision(5) << beta_(a);
-			outfile << left << setw(10) << setprecision(5) << E_(a,b);
-			outfile << left << setw(10) << setprecision(5) << E_err_(a,b) << endl;		}
-	}
-
-	outfile.close();
-}
-
-void CBosonSystem::random_initial_positions(){
-
-	for(int i = 0; i < N_; ++i){
-		for(int j = 0; j < D_; ++j){
-			r_(i,j) = step_*(rand01()-0.5);
-		}
-	}
-}
-
-void CBosonSystem::random_trial_positions(){
-
-	r_new_ = zeros<mat>(max_,max_);
-
-	for(int i = 0; i < N_; ++i){
-		for(int j = 0; j < D_; ++j){
-			r_new_(i,j) = r_(i,j)+step_*(rand01()-0.5);
-		}
-	}
-}
-
-// distance between ith and jth particle
-double CBosonSystem::distance(mat r, int i, int j){
-
-	double distance = 0.0;
-
-	for(int d = 0; d < D_; ++d){
-		distance += pow(r(i,d)-r(j,d),2.0);
-	}
-
-	return sqrt(distance);
-}
-
-
-double CBosonSystem::calc_trial_wavefunction(mat r, double alpha, double beta){
-
-	// correlation part
-	double psi = 1.0, r_ij;
-
-	if(a_ > 0.0){
-		for(int i = 0; i < N_; i++){
-			for(int j = 0; j < N_; j++){
-				if(j != i){
-
-					r_ij = distance(r,i,j);
-
-					// wave function vanishes if distance between bosons <= a
-					if(r_ij <= a_){
-						return 0.0;
-					}
-
-					// correlation wave function
-					else psi *= 1.0-a_/r_ij;				
-				}
-			}
-		}	
-	}
-
-
-	// elliptical harmonic oscillator part
-	double sum = 0.0;
-	for(int i = 0; i < N_; ++i){
-		sum += r(i,0)*r(i,0)+r(i,1)*r(i,1)+beta*r(i,2)*r(i,2);
-	}
-	psi *= exp(-alpha*sum);
-
-	return psi;
-}
-
-
-double CBosonSystem::calc_local_energy(mat r, double alpha, double beta){
-
-	// KINETIC
-	double EL_kinetic = 0.0, del_i, del2_i, r_ij;
-
-	// first derivatives
-	for(int i = 0; i < N_; ++i){
-
-		del_i = -2.0*alpha*(r_(i,0)+r_(i,1)+beta*r_(i,2));
-
-		for(int j = 0; j < N_; ++j){
-			if(j != i){
-				r_ij = distance(r,i,j);
-				del_i += (a_/(r_ij*r_ij*(r_ij-a_)))*(r(i,0)-r(j,0)+r(i,1)-r(j,1)+r(i,2)-r(j,2));
-			}
-		}
-
-		EL_kinetic += del_i*del_i;
-	}
-
-	// second derivatives
-	EL_kinetic += -2.0*alpha*N_*(2.0+beta);
-	for(int i = 0; i < N_; ++i){
-
-		for(int j = 0; j < N_; ++j){
-			if(j != i){
-				r_ij = distance(r,i,j);
-				del2_i = a_/(r_ij*r_ij*(r_ij-a_));
-				del2_i *= 3.0-(3.0*r_ij-2.0*a_)*pow((r(i,0)-r(j,0)+r(i,1)-r(j,1)+r(i,2)-r(j,2))/(r_ij*(r_ij-a_)),2.0);
-
-			}
-		}
-
-		EL_kinetic += del2_i;
-	}
-	EL_kinetic *= -0.5*hbar_*hbar_/m_;
-
-
-	// POTENTIAL
-	double EL_potential = 0.0;
-
-	// elliptical harmonic oscillator
-	for(int i = 0; i < N_; ++i){
-		EL_potential += omega_xy_*omega_xy_*(r(i,0)*r(i,0)+r(i,1)*r(i,1));
-		EL_potential += omega_z_*omega_z_*r(i,2)*r(i,2);
-	}
-	EL_potential *= 0.5*m_;
-
-	return EL_kinetic+EL_potential;
-}
-
-
-double CBosonSystem::rand01(){
-
-	uniform_real_distribution<double> dist(0.0,1.0);
 	return dist(rng_);
 }
