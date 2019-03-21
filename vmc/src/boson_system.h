@@ -17,27 +17,21 @@ class CBosonSystem{
 private:
 
 	mt19937 rng_;
+	int randint(int max);
 	double rand01_();
 	double randnorm_();
 
 public:
 
-	int D_, N_, max_;
-	double hbar_, m_, a_, step_;
-	double psi_, psi_new_, omega_xy_, omega_z_;
-	vec alpha_, beta_;
-	mat r_, r_new_, E_, E_err_;
+	int D_, N_, P_, B_, b_;
+	double a_, E, E_err_, timestep_, diff_coeff_, psi_, psi_new_;
+	vec delta_E_, omega2_, alpha_;
+	mat r_, r_new_, qforce_, qforce_new_, batches_;
 
-	CBosonSystem(int number_bosons, int max_variation, double position_step, double mass, double hard_core_diameter,
-	             double omega_xy, double omega_z, double alpha0, double alphaf, double beta0, double betaf);
+	CBosonSystem();
 	~CBosonSystem(){}
 	
-	void montecarlo_sampling(int number_MC_cycles, string filename);
-	void random_initial_positions();
-	void random_trial_positions();
-	double distance(mat r, int i, int j);
-	double calc_trial_wavefunction(mat r, double alpha, double beta);
-	double calc_local_energy(mat r, double alpha, double beta);
+
 	
 
 };

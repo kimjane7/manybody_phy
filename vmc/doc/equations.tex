@@ -109,6 +109,11 @@ E_L(\vec{R}) &= \frac{1}{\Psi_T}
 & \hspace*{5mm} -\frac{1}{2} \sum_{i=1}^N \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) \cdot \left( \sum_{j\neq i}^N \frac{a(\vec{r_i}-\vec{r_j})}{r_{ij}^2(r_{ij}-a)} \right) + \frac{1}{2}\sum_{i=1}^N \vec{\omega^2}\cdot \vec{r_i^2}\\
 \end{align*}
 
+\noindent For importance sampling, we need the gradient of $\Psi_T$ with respect to the variational parameters $\alpha_d$, $d=1,...,D$. 
+\begin{align*}
+\frac{\partial}{\partial \alpha_d} \Psi_T = \exp(p+q) \frac{\partial}{\partial \alpha_d} p = - \Psi_T \sum_{i=1}^N r_{i,d}^2
+\end{align*}
+
 \noindent For gradient descent, we need an expression for the derivative of $E_L$ with respect to the variational parameters $\vec{\alpha}$. We will only consider contributions from $b$ particles in batch $B_k$, where $k$ is chosen randomly. The variational parameters are only present in a few terms in the above expression for $E_L$, so we shall ignore the rest. 
 
 \begin{align*}
