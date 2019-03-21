@@ -2,14 +2,14 @@
 
 CBosonSystem::CBosonSystem(int dimension, int number_bosons, int number_epochs, int batch_size, double hard_core_diameter, vec omega){
 
-	// int
+	// ints
 	D_ = dimension;
 	N_ = number_bosons;
 	P_ = number_epochs;
 	b_ = batch_size;
 	B_ = (int) N_/b_;	               // number of batches for SGD
 	
-	// double
+	// doubles
 	a_ = hard_core_diameter;
 	E_ = 0.0;						   // mean energy
 	E_err_ = 0.0;					   // standard deviation of energy
@@ -18,12 +18,12 @@ CBosonSystem::CBosonSystem(int dimension, int number_bosons, int number_epochs, 
 	psi_ = 0.0;					       // trial wave function
 	psi_new_ = 0.0;
 
-	// vec
+	// vecs
 	delta_E_.zeros(D_); 			   // mean gradient of energy
 	omega2_ = omega % omega;           // frequencies squared
 	alpha_.zeros(D_);                  // variational parameters
 
-	// mat
+	// mats
 	r_.zeros(N_,D_);                   // positions
 	r_new_.zeros(N_,D_);
 	qforce_.zeros(N_,D_);	      	   // quantum force
@@ -39,12 +39,17 @@ CBosonSystem::CBosonSystem(int dimension, int number_bosons, int number_epochs, 
 
 
 // stochastic gradient descent
-void CBosonSystem::stochastic_gradient_descent(int number_MC_cycles, double t0, double t1, vec alpha0){
+void CBosonSystem::stochastic_gradient_descent(int number_MC_cycles, double t0, double t1, vec alpha0, string filename){
 
 	int j = 0, k;
 	double gammaj = t0/t1;             // step length
 	alpha_ = alpha0;				   // initial variational parameters
 	vec gradient_EL = zeros<vec>(D_);  // gradient of local energy
+
+	// open file
+	ofstream outfile;
+	outfile.open(filename);
+	outfile << "# heading" << endl;
 
 	// loop over epochs
 	for(int p = 0; p < P_; ++p){
@@ -54,6 +59,11 @@ void CBosonSystem::stochastic_gradient_descent(int number_MC_cycles, double t0, 
 
 			// calculate ground state energy and stats
 			variational_energy(number_MC_cycles);
+
+			// write stats to file
+			outfile << left << setw(10) << setprecision(5) << E_;
+			outfile << left << setw(10) << setprecision(5) << E_err_;
+			outfile << left << setw(10) << setprecision(5) << alpha_(a);
 
 			// pick kth batch at random
 			k = randint(B_);
