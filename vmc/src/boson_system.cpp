@@ -56,22 +56,21 @@ void CBosonSystem::steepest_gradient_descent(int number_MC_cycles, double tolera
 	// descend until difference in energy is less than tolerance
 	do{
 
-		cout << "j = " << j << endl;
-		cout << "E = " << E_ << endl;
-
-
 		// store value of ground state energy of last iteration
 		E_last = E_;
 
 		// calculate ground state energy and stats
 		variational_energy(number_MC_cycles);
 
-		// write stats and  to file
-		outfile << left << setw(10) << setprecision(5) << E_;
-		outfile << left << setw(10) << setprecision(5) << E_err_;
-		outfile << left << setw(10) << setprecision(5) << delta_E_;
+		// print stats and variational params
+		outfile << left << setw(15) << setprecision(5) << E_;
+		outfile << left << setw(15) << setprecision(5) << E_err_;
+
 		for(int d = 0; d < D_; ++d){
-			outfile << left << setw(10) << setprecision(5) << alpha_(d).raw_print();
+			outfile << left << setw(15) << setprecision(5) << delta_E_(d);
+		}
+		for(int d = 0; d < D_; ++d){
+			outfile << left << setw(15) << setprecision(5) << alpha_(d);
 		}
 		outfile << endl;
 
@@ -84,6 +83,7 @@ void CBosonSystem::steepest_gradient_descent(int number_MC_cycles, double tolera
 
 	}while(abs(E_-E_last) > tolerance);
 
+	outfile.close();
 }
 
 /*
