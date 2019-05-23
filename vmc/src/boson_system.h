@@ -41,7 +41,6 @@ public:
 
 	vec calc_gradient_wavefunction();
 	vec calc_gradient_local_energy();
-	vec calc_gradient_local_energy(int batch_index);
 
 	void random_initial_positions();
 	void random_new_position(int i);
@@ -49,8 +48,6 @@ public:
 	double distance(mat r, int i, int j);
 
 	string alpha_string();
-
-
 
 };
 

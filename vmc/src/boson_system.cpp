@@ -5,9 +5,6 @@ CBosonSystem::CBosonSystem(int dimension, int number_bosons, double hard_core_di
 	// ints
 	D_ = dimension;
 	N_ = number_bosons;
-	//P_ = number_epochs;
-	//b_ = batch_size;
-	//B_ = (int) N_/b_;	               // number of batches for SGD
 	
 	// doubles
 	a_ = hard_core_diameter;
@@ -29,21 +26,13 @@ CBosonSystem::CBosonSystem(int dimension, int number_bosons, double hard_core_di
 	qforce_.zeros(N_,D_);	      	   // quantum force
 	qforce_new_.zeros(N_,D_);
 
-	/*
-	batches_.zeros(B_,b_);             // indices of batches
-	for(int k = 0; k < B_; ++k){
-		for(int l = 0; l < b_; ++l){
-			batches_(k,l) = k*b_+l;
-		}
-	}
-	*/
 }
 
 // steepest gradient descent
 void CBosonSystem::steepest_gradient_descent(int number_MC_cycles, double tolerance, vec alpha0, string filename){
 
-	int j = 0; 						   // number of iterations for convergence
-	double gammaj = 1.0;               // step length
+	int k = 0; 						   // number of iterations for convergence
+	double gammak = 1.0;               // step length
 	double E_last;					   // place holder for gs energy of last iteration
 	alpha_ = alpha0;				   // initial variational parameters
 	E_ = 0.0;
@@ -51,7 +40,9 @@ void CBosonSystem::steepest_gradient_descent(int number_MC_cycles, double tolera
 	// open file
 	ofstream outfile;
 	outfile.open(filename);
-	outfile << "# heading" << endl;
+	outfile << "# number of MC cycles = " << number_MC_cycles << endl;
+	outfile << "# tolerance = " << tolerance << endl;
+	outfile << "# E, E_error, gradient of E, variational parameters" << endl;
 
 	// descend until difference in energy is less than tolerance
 	do{
@@ -76,67 +67,24 @@ void CBosonSystem::steepest_gradient_descent(int number_MC_cycles, double tolera
 
 		// use delta_E_ as approx. to gradient of local energy
 		// compute new suggestion for variational parameters
-		alpha_ -= gammaj*delta_E_;
+		alpha_ -= gammak*delta_E_;
 		
 		// count iterations
-		j += 1;
+		k += 1;
 
 	}while(abs(E_-E_last) > tolerance);
+
+	cout << "iterations: " << k << endl;
 
 	outfile.close();
 }
 
-/*
-// stochastic gradient descent
-void CBosonSystem::stochastic_gradient_descent(int number_MC_cycles, double t0, double t1, vec alpha0, string filename){
-
-	int j = 0, k;
-	double gammaj = t0/t1;             // step length
-	alpha_ = alpha0;				   // initial variational parameters
-	vec gradient_EL = zeros<vec>(D_);  // gradient of local energy
-
-	// open file
-	ofstream outfile;
-	outfile.open(filename);
-	outfile << "# heading" << endl;
-
-	// loop over epochs
-	for(int p = 0; p < P_; ++p){
-
-		// loop over number of batches
-		for(int b = 0; b < B_; ++b){
-
-			// calculate ground state energy and stats
-			variational_energy(number_MC_cycles);
-
-			// write stats to file
-			outfile << left << setw(10) << setprecision(5) << E_;
-			outfile << left << setw(10) << setprecision(5) << E_err_;
-			outfile << left << setw(10) << setprecision(5) << alpha_(a);
-
-			// pick kth batch at random
-			k = randint(B_);
-
-			// compute gradient using the data in kth batch
-			gradient_EL = calc_gradient_local_energy(k);
-
-			// compute new suggestion for variational parameters
-			alpha_ -= gammaj*gradient;
-
-			// update step length
-			gammaj = t0/(p*B_+b+t1);
-			j += 1;
-		}
-	}
-}
-
-*/
 
 // importance sampling
 void CBosonSystem::variational_energy(int number_MC_cycles){
 
 	E_ = 0.0;
-	double E2 = 0.0 ,EL;
+	double E2 = 0.0, EL;
 	vec gradient_psi = zeros<vec>(D_);
 	vec delta_psi = zeros<vec>(D_);
 	vec delta_psiE = zeros<vec>(D_);
@@ -147,6 +95,7 @@ void CBosonSystem::variational_energy(int number_MC_cycles){
 	// calculate initial wave function and quantum force
 	psi_ = calc_trial_wavefunction(r_);
 	qforce_ = calc_quantum_force(r_);
+
 
 	// loop over monte carlo cycles
 	for(int m = 0; m < number_MC_cycles; ++m){
@@ -162,6 +111,7 @@ void CBosonSystem::variational_energy(int number_MC_cycles){
 
 			// Metropolis-Hastings test
 			if(rand01() <= acceptance_ratio(i)){
+
 				r_.row(i) = r_new_.row(i);
 				qforce_.row(i) = qforce_new_.row(i);
 				psi_ = psi_new_;
@@ -213,10 +163,11 @@ double CBosonSystem::calc_trial_wavefunction(mat r){
 	// elliptical harmonic oscillator part
 	for(int i = 0; i < N_; ++i){
 
-		ri2 = r.row(i) % r.row(i);
-		sum += norm(dot(alpha_,ri2));
+		ri2 = vectorise(r.row(i) % r.row(i));
+		sum += dot(alpha_,ri2);
+
 	}
-	psi *= exp(-sum);
+	psi *= exp(-sum);	
 
 	return psi;
 }
@@ -236,15 +187,15 @@ double CBosonSystem::calc_local_energy(){
 
 	for(int i = 0; i < N_; ++i){
 
-		Ri = r_.row(i); // check this is what i expect
+		Ri = vectorise(r_.row(i));
 
-		EL += 0.5*dot(omega2_, Ri%Ri);  // harmonic oscillator part
+		EL += 0.5*dot(omega2_, Ri%Ri);
 		EL -= 2.0*dot(alpha2, Ri%Ri);
 
 		for(int j = 0; j < N_; ++j){
 			if(i != j){
 
-				Rj = r_.row(j);
+				Rj = vectorise(r_.row(j));
 				rij = distance(r_,i,j);
 				prefactor = a_/(rij*rij*(rij-a_));
 
@@ -258,11 +209,11 @@ double CBosonSystem::calc_local_energy(){
 
 	for(int i = 0; i < N_-1; ++i){
 
-		Ri = r_.row(i);
+		Ri = vectorise(r_.row(i));
 
 		for(int j = i+1; j < N_; ++j){
 
-			Rj = r_.row(j);
+			Rj = vectorise(r_.row(j));
 			rij = distance(r_,i,j);
 
 			prefactor = a_/(rij*rij*(rij-a_));
@@ -278,15 +229,14 @@ double CBosonSystem::calc_local_energy(){
 mat CBosonSystem::calc_quantum_force(mat r){
 
 	double prefactor, rij;
-	vec Ri = zeros<vec>(D_);
-	vec Rj = zeros<vec>(D_);
+	rowvec Ri = zeros<rowvec>(D_);
+	rowvec Rj = zeros<rowvec>(D_);
 	mat qforce = zeros<mat>(N_,D_);
 
 	for(int i = 0; i < N_; ++i){
 
 		Ri = r.row(i);
-
-		qforce.row(i) = -4.0*(alpha_%Ri);
+		qforce.row(i) = -4.0*(conv_to<rowvec>::from(alpha_)%Ri);
 
 		for(int j = 0; j < N_; ++j){
 			if(i != j){
@@ -298,6 +248,7 @@ mat CBosonSystem::calc_quantum_force(mat r){
 				qforce.row(i) += 2.0*prefactor*(Ri-Rj);				
 			}
 		}
+
 	}
 
 	return qforce;
@@ -350,42 +301,6 @@ vec CBosonSystem::calc_gradient_local_energy(){
 	return gradient_EL;
 }
 
-/*
-// calculate gradient of local energy wrt variational parameters for batch only
-vec CBosonSystem::calc_gradient_local_energy(int batch_index){
-
-	int k = batch_index;
-	double sum, rij;	
-	vec gradient_EL = zeros<vec>(D_);
-
-	// loop through components of gradient
-	for(int d = 0; d < D_; ++d){
-
-		sum = b_;
-
-		// loop through particles in batch
-		for(int l = 0; l < b_; ++l){
-
-			// get particle index
-			i = batches_(k,l);
-
-			sum -= 4.0*alpha_(d)*r_(i,d)*r_(i,d);
-			for(int j = 0; j < N_; ++j){
-				if(i != j){
-
-					rij = distance(r_,i,j);
-					sum += 2.0*a_*r_(i,d)*(r_(i,d)-r_(j,d))/(rij*rij*(rij-a_));
-				}
-			}
-		}
-
-		gradient_EL(d) = sum;
-	}
-
-	return gradient_EL;
-}
-*/
-
 // set random initial positions
 void CBosonSystem::random_initial_positions(){
 
@@ -421,7 +336,7 @@ double CBosonSystem::acceptance_ratio(int i){
 // distance between ith and jth bosons
 double CBosonSystem::distance(mat r, int i, int j){
 
-	vec rij = r.row(i)-r.row(j);
+	vec rij = vectorise(r.row(i)-r.row(j));
 
 	return norm(rij,2);
 }

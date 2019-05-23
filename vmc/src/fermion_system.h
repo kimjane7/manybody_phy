@@ -1,5 +1,5 @@
-#ifndef FERMION_SYSTEM_H
-#define FERMION_SYSTEM_H
+#ifndef BOSON_SYSTEM_H
+#define BOSON_SYSTEM_H
 
 #include <iostream>
 #include <cmath>
@@ -17,25 +17,37 @@ class CFermionSystem{
 private:
 
 	mt19937 rng_;
-	double rand01_();
+	int randint(int max);
+	double rand01();
+	double randnorm();
 
 public:
 
-	int dim_, N_, max_;
-	double step_, psi_, psi_new_;
-	vec alpha_, beta_;
-	mat r_, r_new_, E_, E_err_;
+	int D_, N_;
+	double a_, E_, E_err_, timestep_, diff_coeff_, psi_, psi_new_;
+	vec delta_E_, omega2_, alpha_;
+	mat r_, r_new_, qforce_, qforce_new_;
 
-	CFermionSystem(int dimension, int number_bosons, int max_variation, double position_step, 
-		         double alpha0, double alphaf, double beta0, double betaf);
+	CFermionSystem(int dimension, int number_fermions, double hard_core_diameter, vec omega);
 	~CFermionSystem(){}
 	
-	void montecarlo_sampling(int number_MC_cycles, string filename);
+	void steepest_gradient_descent(int number_MC_cycles, double tolerance, vec alpha0, string filename);
+	void variational_energy(int number_MC_cycles);
+
+	double calc_trial_wavefunction(mat r);
+	double calc_local_energy();
+
+	mat calc_quantum_force(mat r);
+
+	vec calc_gradient_wavefunction();
+	vec calc_gradient_local_energy();
+
 	void random_initial_positions();
-	void random_trial_positions();
-	double calc_trial_wavefunction(mat r, double alpha, double beta);
-	double calc_local_energy(double alpha, double beta);
-	
+	void random_new_position(int i);
+	double acceptance_ratio(int i);
+	double distance(mat r, int i, int j);
+
+	string alpha_string();
 
 };
 
