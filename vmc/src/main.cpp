@@ -1,4 +1,5 @@
 #include "boson_system.h"
+#include "RBM.h"
 
 using namespace std;
 using namespace arma;
@@ -6,6 +7,8 @@ using namespace arma;
 
 int main(int argc, char *argv[]){
 
+
+	/*
 	int dimension = 2;
 	int number_bosons = 2;
 	double hard_core_diameter = 0.0;
@@ -18,6 +21,11 @@ int main(int argc, char *argv[]){
 	vec alpha0 = ones<vec>(dimension);
 
 	Bosons.steepest_gradient_descent(number_MC_cycles, tolerance, alpha0, "bosons_N2_D2.dat");
+	*/
+
+	vec input = randn<vec>(10);
+	CRBM WaveFunction(6,input);
+
 
 	return 0;
 }
