@@ -21,8 +21,11 @@ public:
 	vec x_, a_, b_, f_, Omega2_; 
 	mat W_, B_;
 
-	RBM(int number_particles, int number_hidden, vec omega, vec input);
+	RBM(int number_particles, int number_hidden, vec omega);
 	~RBM(){}
+
+	void steepest_gradient_descent(int number_MC_cycles, double tolerance, string filename);
+
 
 	double calc_energy();
 	double calc_local_energy();

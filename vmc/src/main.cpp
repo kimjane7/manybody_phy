@@ -27,8 +27,7 @@ int main(int argc, char *argv[]){
 
 	int number_hidden = 3;
 	vec omega = ones<vec>(dimension);
-	vec input = randn<vec>(number_particles*dimension);
-	RBM WaveFunction(number_particles, number_hidden, omega, input);
+	RBM WaveFunction(number_particles, number_hidden, omega);
 	cout << WaveFunction.calc_local_energy() << endl;
 
 

@@ -1,20 +1,29 @@
 #include "RBM.h"
 
-RBM::RBM(int number_particles, int number_hidden, vec omega, vec input){
+RBM::RBM(int number_particles, int number_hidden, vec omega){
 
 	P_ = number_particles;
 	D_ = omega.n_elem;
-	M_ = input.n_elem;
+	M_ = P_*D_;
 	N_ = number_hidden;
-	x_ = input;
 
-	// check that input is the right size
-	if (M_ != P_*D_) {
-		cout << "ERROR: input is the wrong size" << endl;
-	}
 
-	// set random initial hidden layer, biases, and weights
+	// copied from boson_system
+	a_ = hard_core_diameter;
+	E_ = 0.0;						   // mean energy
+	E_err_ = 0.0;					   // standard deviation of energy
+	timestep_ = 0.05;			       // Fokker-Planck equation parameters
+	diff_coeff_ = 0.5;
+	psi_ = 0.0;					       // trial wave function
+	psi_new_ = 0.0;
+
+	delta_E_.zeros(D_); 			   // mean gradient of energy
+
+
+	// set random initial positions, hidden layer, biases, and weights
 	arma::arma_rng::set_seed_random();
+	x_.randn(M_);
+	x_new_.zeros(M_);
 	h_ = randi<ivec>(N_, distr_param(0,1));
 	a_.randn(M_);
 	b_.randn(N_);
@@ -54,8 +63,9 @@ double RBM::calc_local_energy(){
 	}
 
 	return EL;
-
 }
+
+double RBM::calc_wavefunction()
 
 void RBM::store_factors(){
 

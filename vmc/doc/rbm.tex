@@ -80,10 +80,10 @@ x_i &= r_{\text{floor}(i/D), i \text{mod} D}
 \noindent Now we can write our representation of the wavefunction as a function of all coordinates:
 \begin{align*}
 \Psi_{\vec{\theta}}(\vec{R}) &=\frac{1}{Z} \exp \left( -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 \right) \prod_{j=0}^{N-1} \left( 1 + \exp \left( b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right) \right)\\
-&= \frac{1}{Z} \exp (A(\vec{R})) B(\vec{R}),\\
-A(\vec{R}) &\equiv -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2,\\
+&= \frac{1}{Z} \exp (A(\vec{R})) B(\vec{R})\\
+A(\vec{R}) &\equiv -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 = - \frac{1}{2}\sum_{i=0}^{M-1} (x_i-a_i)^2 = -\frac{1}{2} \| \vec{x} - \vec{a} \|^2\\
 B(\vec{R}) &\equiv \prod_{j=0}^{N-1} \left( 1 + \exp \left( B_j(\vec{R}) \right) \right)\\
-B_j(\vec{R}) &\equiv b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} = b_j + \vec{x}\cdot \vec{W}_j
+B_j(\vec{R}) &\equiv b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} = b_j + \sum_{i=0}^{M-1} x_i W_{i,j} = b_j + \vec{x}\cdot \vec{W}_j
 \end{align*}
 
 \noindent The local energy is defined as
@@ -197,8 +197,23 @@ E_L &= \frac{M}{2} +\sum_{i=0}^{M-1} \left[ - \sum_{j=0}^{N-1} \sum_{j'<j} \frac
 \end{align*}
 In the last line, we have defined a vector $\vec{\Omega}$ with elements $\Omega_i = \omega_{i\text{mod}D}$. For more efficient computation of $E_L$ I will store the factors $f_j\equiv \frac{1}{\exp(-B_j)+1}$ in a vector $\vec{f}$ so that
 \begin{align*}
-E_L &= &= \frac{M}{2} -\sum_{j=0}^{N-1} \left[ f_j\vec{W}_j\cdot \left( \sum_{j'<j} f_{j'}\vec{W}_{j'}
+E_L&= \frac{M}{2} -\sum_{j=0}^{N-1} \left[ f_j\vec{W}_j\cdot \left( \sum_{j'<j} f_{j'}\vec{W}_{j'}
 +\frac{1}{2} \vec{W}_j +(\vec{a}-\vec{x})\right) \right]  - \frac{1}{2} \| \vec{a}-\vec{x}\|^2 + \frac{1}{2} (\Omega \% \Omega)\cdot (\vec{x} \% \vec{x}) \\
+\end{align*}
+
+\noindent For stochastic gradient descent, we will also need the gradient of the local energy with respect to the RBM parameters $\vec{\theta}$:
+\begin{align*}
+G_k = \frac{\partial \langle E_L \rangle}{\partial \theta_k} = 2 \left( \left\langle E_L \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle - \left\langle E_L \right\rangle \left\langle \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle \right)
+\end{align*}
+
+\noindent The derivatives of our new wavefunction with respect to the variational parameters are given by:
+\begin{align*}
+\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial a_k} &= \Psi_{\vec{\theta}} (x_k - a_k) 
+&\longrightarrow &\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial \vec{a}} = \Psi_{\vec{\theta}} (\vec{x}-\vec{a}) \\
+\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial b_k} &= \Psi_{\vec{\theta}} \frac{1}{\exp(-B_k)+1}
+&\longrightarrow &\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial \vec{b}} = \Psi_{\vec{\theta}} \vec{f} \\
+\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial W_{k,l}} &= \Psi_{\vec{\theta}} \frac{x_k}{\exp(-B_l)+1}
+&\longrightarrow &\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial \vec{W}_j} = \Psi_{\vec{\theta}} f_j\vec{x} \\
 \end{align*}
 
 
