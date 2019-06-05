@@ -8,8 +8,10 @@ using namespace arma;
 int main(int argc, char *argv[]){
 
 
-	/*
+
 	int dimension = 2;
+	int number_particles = 5;
+	/*
 	int number_bosons = 2;
 	double hard_core_diameter = 0.0;
 	vec omega = ones<vec>(dimension);
@@ -23,8 +25,11 @@ int main(int argc, char *argv[]){
 	Bosons.steepest_gradient_descent(number_MC_cycles, tolerance, alpha0, "bosons_N2_D2.dat");
 	*/
 
-	vec input = randn<vec>(10);
-	CRBM WaveFunction(6,input);
+	int number_hidden = 3;
+	vec omega = ones<vec>(dimension);
+	vec input = randn<vec>(number_particles*dimension);
+	RBM WaveFunction(number_particles, number_hidden, omega, input);
+	cout << WaveFunction.calc_local_energy() << endl;
 
 
 	return 0;

@@ -1,0 +1,205 @@
+\documentclass[12pt]{article}
+\pdfoutput=1
+\usepackage{bm}% bold math
+\usepackage{graphicx}
+\graphicspath{}
+%\usepackage{tabularx}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{bbm}
+\usepackage{hyperref}
+\usepackage{mathdots}
+\usepackage{booktabs}
+\setlength{\heavyrulewidth}{1.5pt}
+\setlength{\abovetopsep}{4pt}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{nicefrac}
+\usepackage{subcaption}
+\newenvironment{psmallmatrix}
+  {\left[\begin{matrix}}
+  {\end{matrix}\right]}
+  \usepackage{listings}
+
+
+\begin{document}
+
+\begin{center}
+\begin{large}
+GAUSSIAN-BINARY RESTRICTED BOLTZMANN MACHINES
+\end{large}
+\end{center}
+
+\noindent Notation:
+\begin{itemize}
+\item visible nodes $\vec{x}  \in \mathbb{R}^M$ - gaussian units (position coordinates)
+\item hidden nodes $\vec{h} \in \mathbb{R}^N$ - binary units
+\item visible biases $\vec{a} \in \mathbb{R}^M$
+\item hidden biases $\vec{b} \in \mathbb{R}^N$
+\item interaction weights $\hat{W} \in \mathbb{R}^{M\times N}$
+\item $j$th column vector of weight matrix $\vec{W}_j \in \mathbb{R}^M$
+\item variational parameters $\vec{\theta} = ( a_0, \cdots, a_{M-1},b_0,\cdots,b_{N-1}, W_{0,0},\cdots,W_{M-1,N-1} )$ \\
+\end{itemize}
+
+\noindent Assume that the input $\vec{x}$ is already mean-centered and scaled so that $\sigma = 1$. \\
+
+\noindent "Energy" of a configuration of nodes:
+\begin{align*}
+E_{\vec{\theta}}(\vec{x},\vec{h}) &= \frac{1}{2} \sum_{i=0}^{M-1}(x_i - a_i)^2 - \sum_{j=0}^{N-1} b_j h_j - \sum_{i=0}^{M-1}\sum_{j=0}^{N-1} x_i W_{ij} h_j\\
+&= \frac{1}{2} \| \vec{x} - \vec{a} \|^2 - \vec{b}^T \vec{h} - \vec{x}^T \hat{W} \vec{h}
+\end{align*}
+
+\noindent Use the marginal probability to represent the wavefunction as a function of the RBM inputs:
+\begin{align*}
+\Psi_{\vec{\theta}}(\vec{x}) &= \frac{1}{Z} \sum_{\vec{h}} e^{-E_{\vec{\theta}}(\vec{x},\vec{h})}\\
+&= \frac{1}{Z} \sum_{ \{ h_j \} } \exp \left( -\frac{1}{2} \sum_{i=0}^{M-1}(x_i - a_i)^2 + \sum_{j=0}^{N-1} b_j h_j + \sum_{i=0}^{M-1}\sum_{j=0}^{N-1} x_i W_{ij} h_j  \right)\\
+&=\frac{1}{Z} \exp \left( -\frac{1}{2} \sum_{i=0}^{M-1}(x_i - a_i)^2 \right) \sum_{ \{ h_j \} } \exp \left( \sum_{j=0}^{N-1} b_j h_j + \sum_{i=0}^{M-1}\sum_{j=0}^{N-1} x_i W_{ij} h_j  \right)\\
+&=\frac{1}{Z} \exp \left( -\frac{1}{2} \sum_{i=0}^{M-1}(x_i - a_i)^2 \right) \prod_{j=0}^{N-1} \sum_{ h_j=0 }^1 \exp \left( b_j h_j + \sum_{i=0}^{M-1} x_i W_{ij} h_j  \right)\\
+&=\frac{1}{Z} \exp \left( -\frac{1}{2} \sum_{i=0}^{M-1}(x_i - a_i)^2 \right) \prod_{j=0}^{N-1} \left( 1 + \exp \left( b_j + \sum_{i=0}^{M-1} x_i W_{ij} \right) \right)\\
+&= \frac{1}{Z} \exp \left( -\frac{1}{2} \| \vec{x}-\vec{a} \|^2 \right) \prod_{j=0}^{N-1} \left( 1 + \exp \left( b_j + \vec{x} \cdot \vec{W}_j \right) \right)
+\end{align*}
+
+\noindent Hamiltonian for $P$ $D$-dimensional bosons in a harmonic oscillator:
+\begin{align*}
+\hat{H} = \frac{1}{2} \sum_{p = 0}^{P-1} \left( -\nabla_p^2 + \sum_{d=0}^{D-1} \omega_d^2 r_{p,d}^2 \right) 
+\end{align*}
+\noindent This is also the Hamiltonian for non-interacting fermions. \\
+\noindent Q: How do we deal with the hard-core interaction?\\
+
+\noindent We need to vectorize the coordinates of all the particles to input into the RBM:
+\begin{align*}
+\vec{x} = ( r_{0,0}, \cdots, r_{0,D-1}, \cdots, r_{P-1,0}, \cdots, r_{P-1,D-1} ) \in \mathbb{R}^M, \ M = PD
+\end{align*}
+\noindent The visible biases and the rows of the weight matrix are organized in the same way. The mapping between coordinates and the visible nodes are:
+\begin{align*}
+r_{p,d} &= x_{Dp+d}\\
+x_i &= r_{\text{floor}(i/D), i \text{mod} D}
+\end{align*}
+
+\noindent Now we can write our representation of the wavefunction as a function of all coordinates:
+\begin{align*}
+\Psi_{\vec{\theta}}(\vec{R}) &=\frac{1}{Z} \exp \left( -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 \right) \prod_{j=0}^{N-1} \left( 1 + \exp \left( b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right) \right)\\
+&= \frac{1}{Z} \exp (A(\vec{R})) B(\vec{R}),\\
+A(\vec{R}) &\equiv -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2,\\
+B(\vec{R}) &\equiv \prod_{j=0}^{N-1} \left( 1 + \exp \left( B_j(\vec{R}) \right) \right)\\
+B_j(\vec{R}) &\equiv b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} = b_j + \vec{x}\cdot \vec{W}_j
+\end{align*}
+
+\noindent The local energy is defined as
+\begin{align*}
+E_L = \frac{1}{\Psi} \hat{H} \Psi
+\end{align*}
+
+\noindent We want an analytical expression for the local energy in terms of our variational parameters $\vec{\theta}$. First, we need the following quantities:
+
+\begin{align*}
+\nabla_k \Psi_{\vec{\theta}} (\vec{R}) &= \frac{1}{Z} \nabla_k \left[ \exp(A)B \right] 
+= \frac{1}{Z} \left( \exp(A)\nabla_k[B] + \nabla_k[\exp(A)] B \right)\\
+&=\frac{1}{Z} \exp(A) \left( \nabla_k[B] + \nabla_k[A] B \right)\\ \\
+\nabla_k^2 \Psi_{\vec{\theta}} (\vec{R}) 
+&=\frac{1}{Z} \nabla_k \left[ \exp(A) \left( \nabla_k[B] + \nabla_k[A] B \right) \right] \\
+&=\frac{1}{Z} \left( \exp(A) \nabla_k \left[ \nabla_k[B] + \nabla_k[A] B \right] + \nabla_k [ \exp(A) ] \left( \nabla_k[B] + \nabla_k[A] B \right) \right)\\
+&= \frac{1}{Z} \left( \exp(A) \left( \nabla_k^2[B] + \nabla_k[A] \nabla_k[B] + \nabla_k^2[A] B \right) + \exp(A) \nabla_k[A] \left( \nabla_k[B] + \nabla_k[A] B \right) \right)\\
+&= \frac{1}{Z} \exp(A) \left( \nabla_k^2[B] + \nabla_k[A]\nabla_k[B]+\nabla_k^2[A] B + \nabla_k[A]\nabla_k[B] + \left( \nabla_k[A] \right)^2 B \right)\\
+&= \frac{1}{Z} \exp(A) \left( \nabla_k^2[B] + 2\nabla_k[A]\nabla_k[B]+\nabla_k^2[A] B + \left( \nabla_k[A] \right)^2 B \right)\\
+\end{align*}
+\begin{align*}
+\frac{1}{\Psi_{\vec{\theta}} (\vec{R})} \nabla_k^2 \Psi_{\vec{\theta}} (\vec{R}) 
+&= \frac{Z \exp(-A)}{B} \frac{1}{Z} \exp(A) \left( \nabla_k^2[B] + 2\nabla_k[A]\nabla_k[B]+\nabla_k^2[A] B + \left( \nabla_k[A] \right)^2 B \right)\\
+&= \frac{\nabla_k^2[B]}{B} + 2\frac{\nabla_k[A]\nabla_k[B]}{B}+\nabla_k^2[A] + \left( \nabla_k[A] \right)^2
+\end{align*}
+
+\noindent Let $\hat{n_d}$, $d = 0, ..., D-1$, denote the elementary unit vectors in each of the $D$ dimensions. Then,
+
+\begin{align*}
+A(\vec{R}) &\equiv -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2,\\
+\nabla_k[A]
+&= \sum_{d'=0}^{D-1} \frac{\partial A}{\partial r_{k,d'}} \hat{n_{d'}} = \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 \right] \hat{n_{d'}} \\
+&= \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ -\frac{1}{2}  (r_{k,d'} - a_{Dk+d'})^2 \right] \hat{n_{d'}} = \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  \\
+( \nabla_k[A] )^2 &= \nabla_k[A]  \cdot \nabla_k[A] = \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} )^2\\
+\nabla_k^2 [A] &= \nabla_k \cdot \nabla_k[A] = \nabla_k \cdot \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}} = \sum_{d=0}^{D-1} (-1) = -D\\ 
+\end{align*}
+\begin{align*}
+B_j(\vec{R}) &\equiv b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j}\\
+\nabla_k [B_j]  &= \sum_{d'=0}^{D-1} \frac{\partial B_j}{\partial r_{k,d'}} \hat{n}_{d'} = \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right] \hat{n}_{d'}\\
+&= \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ r_{k,d'} W_{Dk+d',j} \right] \hat{n}_{d'} = \sum_{d=0}^{D-1} W_{Dk+d,j} \hat{n}_d \\
+\nabla_k^2 [B_j] &= 0\\
+B(\vec{R}) &\equiv \prod_{j=0}^{N-1} \left( 1 + \exp \left( B_j(\vec{R}) \right) \right)\\
+\nabla_k [B] &= \sum_{j=0}^{N-1} \nabla_k [1+\exp(B_j)] \prod_{j'\neq j} (1+\exp(B_{j'}))\\
+&= \sum_{j=0}^{N-1} \exp (B_j) \nabla_k [B_j] \prod_{j'\neq j} (1+\exp(B_{j'}))\\
+&= \sum_{j=0}^{N-1} \exp (B_j) \left( \sum_{d=0}^{D-1} W_{Dk+d,j} \hat{n}_d \right) \prod_{j'\neq j} (1+\exp(B_{j'}))\\
+&= \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right) \hat{n_d} \\
+\frac{\nabla_k[B]}{B} &= \frac{\sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right) \hat{n_d}}{\prod_{j'=0}^{N-1}(1+\exp(B_{j'}))}\\
+&= \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \frac{\exp(B_j)}{1+\exp(B_j)} \right) \hat{n_d}\\
+&= \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} \frac{W_{Dk+d,j}}{\exp(-B_j)+1} \right) \hat{n_d}\\
+\end{align*}
+\begin{align*}
+\nabla_k^2[B] &= \nabla_k \cdot \nabla_k [B] \\
+&= \left( \sum_{d'=0}^{D-1} \hat{n_{d'}} \frac{\partial}{\partial r_{k,d'}} \right) \cdot \left[  \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right) \hat{n_d}\right] \\
+&= \sum_{d=0}^{D-1} \frac{\partial}{\partial r_{k,d}} \left[ \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right]  \\
+&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \frac{\partial}{\partial r_{k,d}} \left[  \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right]\\
+&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \left(  \exp(B_j) \frac{\partial}{\partial r_{k,d}} \left[  \prod_{j'\neq j} (1+\exp(B_{j'})) \right] + \frac{\partial}{\partial r_{k,d}} [\exp(B_j)]  \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
+&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \left( \exp(B_j) \sum_{j'=0,\ j'\neq j}^{N-1} \frac{\partial}{\partial r_{k,d}} [1+\exp(B_{j'})] \prod_{j''\neq j,j'} (1+\exp(B_{j''})) \right.\\
+& \hspace*{3.75cm} \left. + \exp(B_j) \frac{\partial}{\partial r_{k,d}} [B_j] \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
+&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) \frac{\partial}{\partial r_{k,d}} [B_{j'}] \prod_{j''\neq j,j'} (1+\exp(B_{j''})) \right.\\
+& \hspace*{5.25cm} \left. + \frac{\partial}{\partial r_{k,d}} [B_j] \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
+&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) W_{Dk+d,j'} \prod_{j''\neq j,j'} (1+\exp(B_{j''})) \right.\\
+& \hspace*{5.25cm} \left. + W_{Dk+d,j} \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
+\frac{\nabla_k^2[B]}{B} &= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) W_{Dk+d,j'} \frac{\prod_{j''\neq j,j'} (1+\exp(B_{j''}))}{\prod_{j''=0}^{N-1}(1+\exp(B_{j''}))} \right.\\
+& \hspace*{5.25cm} \left. + W_{Dk+d,j} \frac{\prod_{j'\neq j} (1+\exp(B_{j'}))}{\prod_{j'=0}^{N-1}(1+\exp(B_{j'}))} \right)\\
+&= \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) W_{Dk+d,j'} \frac{1}{(1+\exp(B_j))(1+\exp(B_{j'}))} \right.\\
+& \hspace*{5.25cm} \left. + W_{Dk+d,j} \frac{1}{1+\exp(B_j)} \right)\\
+&= \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  W_{Dk+d,j} \frac{\exp(B_j)}{1+\exp(B_j)} \left( \sum_{j'=0,\ j'\neq j}^{N-1} W_{Dk+d,j'} \frac{\exp(B_{j'})}{1+\exp(B_{j'})} + W_{Dk+d,j} \right)\\
+&= \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dk+d,j}}{\exp(-B_j)+1} \left( \sum_{j'=0,\ j'\neq j}^{N-1} \frac{W_{Dk+d,j'}}{\exp(-B_{j'})+1} + W_{Dk+d,j} \right)\\
+\end{align*}
+
+Putting all this together...
+\begin{align*}
+E_L &= \frac{1}{\Psi_{\vec{\theta}}(\vec{R})} \left[
+\frac{1}{2} \sum_{p = 0}^{P-1} \left( -\nabla_p^2 + \sum_{d=0}^{D-1} \omega_d^2 r_{p,d}^2 \right)  \right] \Psi_{\vec{\theta}}(\vec{R})\\
+&= \sum_{p=0}^{P-1} \left[  -\frac{1}{2} \left( \frac{\nabla_p^2[B]}{B} + 2\frac{\nabla_p[A]\nabla_p[B]}{B}+\nabla_p^2[A] + \left( \nabla_p[A] \right)^2 \right) + \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2
+ \right]\\
+ &= \sum_{p=0}^{P-1} \left[ -\frac{1}{2} \frac{\nabla_p^2[B]}{B} -\frac{\nabla_p[A]\nabla_p[B]}{B}-\frac{1}{2} \nabla_p^2[A] -\frac{1}{2} \left( \nabla_p[A] \right)^2 + \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2
+ \right]\\
+&= \sum_{p=0}^{P-1} \left[
+-\frac{1}{2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}}{\exp(-B_j)+1} \left( \sum_{j'=0,\ j'\neq j}^{N-1} \frac{W_{Dp+d,j'}}{\exp(-B_{j'})+1} + W_{Dp+d,j} \right) \right.\\
+& \hspace*{1.5cm} \left.
+- \left( \sum_{d'=0}^{D-1} (a_{Dp+d'} -r_{p,d'} ) \hat{n_{d'}} \right) \cdot \left( \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}}{\exp(-B_j)+1} \hat{n_d} \right) \right.\\
+& \hspace*{1.5cm} \left.
+-\frac{1}{2} (-D)
+-\frac{1}{2} \sum_{d=0}^{D-1} (a_{Dp+d} -r_{p,d} )^2
++ \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2 \right]\\
+&= \sum_{p=0}^{P-1} \left[ -\frac{1}{2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}}{\exp(-B_j)+1} \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \frac{W_{Dp+d,j'}}{\exp(-B_{j'})+1} + W_{Dp+d,j} \right) \right.\\
+& \hspace*{1.5cm} \left.
+- \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{(a_{Dp+d} -r_{p,d} ) W_{Dp+d,j}}{\exp(-B_j)+1}
++\frac{D}{2}
+-\frac{1}{2} \sum_{d=0}^{D-1} (a_{Dp+d} -r_{p,d} )^2
++ \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2
+ \right]\\
+ &= \frac{PD}{2} +\sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \left[ -\frac{1}{2}  \sum_{j=0}^{N-1} \sum_{j'=0, \ j'\neq j}^{N-1} \frac{W_{Dp+d,j}W_{Dp+d,j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
+-\frac{1}{2} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}^2}{\exp(-B_j)+1} \right.\\
+&\hspace*{3.4cm} \left. -\sum_{j=0}^{N-1} \frac{(a_{Dp+d} -r_{p,d} ) W_{Dp+d,j}}{\exp(-B_j)+1} - \frac{1}{2} (a_{Dp+d}-r_{p,d})^2 + \frac{1}{2} \omega_d^2 r_{p,d}^2 \right]
+\end{align*}
+In terms of the inputs $x_i$, $i = 0, ..., M-1$,
+\begin{align*}
+E_L &= \frac{M}{2} +\sum_{i=0}^{M-1} \left[ - \sum_{j=0}^{N-1} \sum_{j'<j} \frac{W_{i,j}W_{i,j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
+-\frac{1}{2} \sum_{j=0}^{N-1} \frac{W_{i,j}^2}{\exp(-B_j)+1} \right.\\
+&\hspace*{2.75cm} \left. -\sum_{j=0}^{N-1} \frac{(a_{i} -x_i ) W_{i,j}}{\exp(-B_j)+1} - \frac{1}{2} (a_{i}-x_i)^2 + \frac{1}{2} \omega_{i\text{mod}D}^2 x_i^2 \right]\\
+&= \frac{M}{2} +\sum_{j=0}^{N-1} \left[ - \sum_{j'<j}\sum_{i=0}^{M-1} \frac{W_{i,j}W_{i,j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
+-\frac{1}{2}\sum_{i=0}^{M-1} \frac{W_{i,j}^2}{\exp(-B_j)+1} - \sum_{i=0}^{M-1} \frac{(a_{i} -x_i ) W_{i,j}}{\exp(-B_j)+1}\right]\\
+&\hspace*{.5cm}+\sum_{i=0}^{M-1} \left[ - \frac{1}{2} (a_{i}-x_i)^2 + \frac{1}{2} \omega_{i\text{mod}D}^2 x_i^2 \right]\\
+&= \frac{M}{2} +\sum_{j=0}^{N-1} \left[ - \sum_{j'<j} \frac{\vec{W}_j\cdot \vec{W}_{j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
+-\frac{1}{2} \frac{\vec{W}_j\cdot \vec{W}_j}{\exp(-B_j)+1} - \frac{(\vec{a}-\vec{x})\cdot \vec{W}_j }{\exp(-B_j)+1}\right]\\
+&\hspace*{.5cm}  - \frac{1}{2} (\vec{a}-\vec{x}) \cdot (\vec{a}-\vec{x}) + \frac{1}{2}  \sum_{i=0}^{M-1}\omega_{i\text{mod}D}^2 x_i^2 \\
+&= \frac{M}{2} -\sum_{j=0}^{N-1} \left[ \frac{\vec{W}_j}{\exp(-B_j)+1} \cdot \left( \sum_{j'<j} \frac{\vec{W}_{j'}}{\exp(-B_{j'})+1}
++\frac{1}{2} \vec{W}_j +(\vec{a}-\vec{x})\right) \right]  - \frac{1}{2} \| \vec{a}-\vec{x}\|^2 + \frac{1}{2} (\Omega \% \Omega)\cdot (\vec{x} \% \vec{x}) \\
+\end{align*}
+In the last line, we have defined a vector $\vec{\Omega}$ with elements $\Omega_i = \omega_{i\text{mod}D}$. For more efficient computation of $E_L$ I will store the factors $f_j\equiv \frac{1}{\exp(-B_j)+1}$ in a vector $\vec{f}$ so that
+\begin{align*}
+E_L &= &= \frac{M}{2} -\sum_{j=0}^{N-1} \left[ f_j\vec{W}_j\cdot \left( \sum_{j'<j} f_{j'}\vec{W}_{j'}
++\frac{1}{2} \vec{W}_j +(\vec{a}-\vec{x})\right) \right]  - \frac{1}{2} \| \vec{a}-\vec{x}\|^2 + \frac{1}{2} (\Omega \% \Omega)\cdot (\vec{x} \% \vec{x}) \\
+\end{align*}
+
+
+\end{document}

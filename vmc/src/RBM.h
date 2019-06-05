@@ -12,20 +12,22 @@
 using namespace std;
 using namespace arma;
 
-class CRBM{
+class RBM{
 
 public:
 
-	int M_, N_;
-	double sigma2_;
+	int P_, D_, M_, N_;
 	ivec h_;
-	vec x_, a_, b_; 
-	mat W_;
+	vec x_, a_, b_, f_, Omega2_; 
+	mat W_, B_;
 
-	CRBM(int number_hidden, double sigma, vec input);
-	~CRBM(){}
+	RBM(int number_particles, int number_hidden, vec omega, vec input);
+	~RBM(){}
 
-	double energy();
+	double calc_energy();
+	double calc_local_energy();
+
+	void store_factors();
 
 };
 
