@@ -39,6 +39,7 @@ GAUSSIAN-BINARY RESTRICTED BOLTZMANN MACHINES
 \item hidden biases $\vec{b} \in \mathbb{R}^N$
 \item interaction weights $\hat{W} \in \mathbb{R}^{M\times N}$
 \item $j$th column vector of weight matrix $\vec{W}_j \in \mathbb{R}^M$
+\item $i$th row vector of weight matrix $\vec{W}_i^T \in \mathbb{R}^N$ 
 \item variational parameters $\vec{\theta} = ( a_0, \cdots, a_{M-1},b_0,\cdots,b_{N-1}, W_{0,0},\cdots,W_{M-1,N-1} )$ \\
 \end{itemize}
 
@@ -60,12 +61,13 @@ E_{\vec{\theta}}(\vec{x},\vec{h}) &= \frac{1}{2} \sum_{i=0}^{M-1}(x_i - a_i)^2 -
 &= \frac{1}{Z} \exp \left( -\frac{1}{2} \| \vec{x}-\vec{a} \|^2 \right) \prod_{j=0}^{N-1} \left( 1 + \exp \left( b_j + \vec{x} \cdot \vec{W}_j \right) \right)
 \end{align*}
 
-\noindent Hamiltonian for $P$ $D$-dimensional bosons in a harmonic oscillator:
+\noindent Hamiltonian for $P$ $D$-dimensional particles in a harmonic oscillator:
 \begin{align*}
-\hat{H} = \frac{1}{2} \sum_{p = 0}^{P-1} \left( -\nabla_p^2 + \sum_{d=0}^{D-1} \omega_d^2 r_{p,d}^2 \right) 
+\hat{H} = \frac{1}{2} \sum_{p = 0}^{P-1} \left( -\nabla_p^2 + \sum_{d=0}^{D-1} \omega_d^2 r_{p,d}^2 \right) + \sum_{p<q} V_{int} (r_{pq}), \ \ r_{pq} = \sqrt{ \sum_{d=0}^{D-1} (r_{p,d}-r_{q,d})^2 } 
 \end{align*}
-\noindent This is also the Hamiltonian for non-interacting fermions. \\
-\noindent Q: How do we deal with the hard-core interaction?\\
+
+
+
 
 \noindent We need to vectorize the coordinates of all the particles to input into the RBM:
 \begin{align*}
@@ -80,11 +82,40 @@ x_i &= r_{\text{floor}(i/D), i \text{mod} D}
 \noindent Now we can write our representation of the wavefunction as a function of all coordinates:
 \begin{align*}
 \Psi_{\vec{\theta}}(\vec{R}) &=\frac{1}{Z} \exp \left( -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 \right) \prod_{j=0}^{N-1} \left( 1 + \exp \left( b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right) \right)\\
-&= \frac{1}{Z} \exp (A(\vec{R})) B(\vec{R})\\
+&=\frac{1}{Z} \exp (A(\vec{R})) \prod_{j=0}^{N-1} \exp\left( \ln \left(  1 + \exp \left( b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right) \right) \right) \\
+&=\frac{1}{Z} \exp (A(\vec{R})) \exp \left( \sum_{j=0}^{N-1} \ln \left(  1 + \exp \left( b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right) \right) \right) \\
+&= \frac{1}{Z} \exp  \Big( A(\vec{R})+ B(\vec{R}) \Big) \\ \\
 A(\vec{R}) &\equiv -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 = - \frac{1}{2}\sum_{i=0}^{M-1} (x_i-a_i)^2 = -\frac{1}{2} \| \vec{x} - \vec{a} \|^2\\
-B(\vec{R}) &\equiv \prod_{j=0}^{N-1} \left( 1 + \exp \left( B_j(\vec{R}) \right) \right)\\
+B(\vec{R}) &\equiv \sum_{j=0}^{N-1} \ln \left(  1 + \exp \left( B_j (\vec{R}) \right) \right)\\
 B_j(\vec{R}) &\equiv b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} = b_j + \sum_{i=0}^{M-1} x_i W_{i,j} = b_j + \vec{x}\cdot \vec{W}_j
 \end{align*}
+
+\noindent If the particles are bosons with a hard-core interaction:
+\begin{align*}
+V_{int} (r_{pq}) = 
+\begin{cases} 
+	\infty, & r_{pq} \leq a,\\
+	0, & r_{pq} > a,
+   \end{cases}
+\end{align*}
+and if the particles are electrons (fermions) with a repulsive Coulomb interaction ($e=1$):
+\begin{align*}
+V_{int} (r_{pq}) = \frac{1}{r_{pq}}
+\end{align*}
+
+\noindent The behaviors due to these interactions are accounted for in the trial wavefunction by a corresponding Jastrow factor so that the full trial wavefunction is 
+\begin{align*}
+\Psi (\vec{R}) = \frac{1}{Z} \exp \Big( A(\vec{R})+B(\vec{R})+J(\vec{R}) \Big)
+\end{align*}
+For bosons with a hard-core interaction:
+\begin{align*}
+J(\vec{R}) = \sum_{p<q} \ln \left( 1-\frac{a}{r_{pq}} \right)
+\end{align*}
+For electrons with the Coulomb interaction:
+\begin{align*}
+J(\vec{R}) = \sum_{p<q} \left( \frac{\alpha r_{pq}}{1+\beta r_{pq}} \right),
+\end{align*}
+where $\beta$ is a variational parameter and $\alpha$ is 1 when the electrons are anti-parallel and $\frac{1}{3}$ when the electrons are parallel.\\ \\
 
 \noindent The local energy is defined as
 \begin{align*}
@@ -94,127 +125,285 @@ E_L = \frac{1}{\Psi} \hat{H} \Psi
 \noindent We want an analytical expression for the local energy in terms of our variational parameters $\vec{\theta}$. First, we need the following quantities:
 
 \begin{align*}
-\nabla_k \Psi_{\vec{\theta}} (\vec{R}) &= \frac{1}{Z} \nabla_k \left[ \exp(A)B \right] 
-= \frac{1}{Z} \left( \exp(A)\nabla_k[B] + \nabla_k[\exp(A)] B \right)\\
-&=\frac{1}{Z} \exp(A) \left( \nabla_k[B] + \nabla_k[A] B \right)\\ \\
-\nabla_k^2 \Psi_{\vec{\theta}} (\vec{R}) 
-&=\frac{1}{Z} \nabla_k \left[ \exp(A) \left( \nabla_k[B] + \nabla_k[A] B \right) \right] \\
-&=\frac{1}{Z} \left( \exp(A) \nabla_k \left[ \nabla_k[B] + \nabla_k[A] B \right] + \nabla_k [ \exp(A) ] \left( \nabla_k[B] + \nabla_k[A] B \right) \right)\\
-&= \frac{1}{Z} \left( \exp(A) \left( \nabla_k^2[B] + \nabla_k[A] \nabla_k[B] + \nabla_k^2[A] B \right) + \exp(A) \nabla_k[A] \left( \nabla_k[B] + \nabla_k[A] B \right) \right)\\
-&= \frac{1}{Z} \exp(A) \left( \nabla_k^2[B] + \nabla_k[A]\nabla_k[B]+\nabla_k^2[A] B + \nabla_k[A]\nabla_k[B] + \left( \nabla_k[A] \right)^2 B \right)\\
-&= \frac{1}{Z} \exp(A) \left( \nabla_k^2[B] + 2\nabla_k[A]\nabla_k[B]+\nabla_k^2[A] B + \left( \nabla_k[A] \right)^2 B \right)\\
-\end{align*}
-\begin{align*}
-\frac{1}{\Psi_{\vec{\theta}} (\vec{R})} \nabla_k^2 \Psi_{\vec{\theta}} (\vec{R}) 
-&= \frac{Z \exp(-A)}{B} \frac{1}{Z} \exp(A) \left( \nabla_k^2[B] + 2\nabla_k[A]\nabla_k[B]+\nabla_k^2[A] B + \left( \nabla_k[A] \right)^2 B \right)\\
-&= \frac{\nabla_k^2[B]}{B} + 2\frac{\nabla_k[A]\nabla_k[B]}{B}+\nabla_k^2[A] + \left( \nabla_k[A] \right)^2
+\nabla_k \{ \Psi \} &= \frac{1}{Z} \nabla_k \Big\{ \exp(A+B+J) \Big\} \\
+&= \frac{1}{Z} \exp(A+B+J) \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)\\
+& = \Psi \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big) \\ \\
+\nabla_k^2 \{\Psi \} &= \nabla_k \Big\{ \Psi \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big) \Big\}\\
+&= \Psi \Big( \nabla_k^2 \{ A \} + \nabla_k^2 \{ B \} +\nabla_k^2 \{ J \} \Big) + \nabla_k \{ \Psi \} \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)\\
+&= \Psi \left(  \nabla_k^2 \{ A \} + \nabla_k^2 \{ B \} +\nabla_k^2 \{ J \}  + \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)^2 \right)\\ \\ 
+\frac{1}{\Psi} \nabla_k^2 \{ \Psi \} &= \nabla_k^2 \{ A \} + \nabla_k^2 \{ B \} +\nabla_k^2 \{ J \}  + \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)^2\\ \\
 \end{align*}
 
 \noindent Let $\hat{n_d}$, $d = 0, ..., D-1$, denote the elementary unit vectors in each of the $D$ dimensions. Then,
 
 \begin{align*}
 A(\vec{R}) &\equiv -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2,\\
-\nabla_k[A]
-&= \sum_{d'=0}^{D-1} \frac{\partial A}{\partial r_{k,d'}} \hat{n_{d'}} = \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 \right] \hat{n_{d'}} \\
-&= \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ -\frac{1}{2}  (r_{k,d'} - a_{Dk+d'})^2 \right] \hat{n_{d'}} = \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  \\
-( \nabla_k[A] )^2 &= \nabla_k[A]  \cdot \nabla_k[A] = \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} )^2\\
-\nabla_k^2 [A] &= \nabla_k \cdot \nabla_k[A] = \nabla_k \cdot \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}} = \sum_{d=0}^{D-1} (-1) = -D\\ 
+\nabla_k \{A\}
+&= \sum_{d'=0}^{D-1} \frac{\partial A}{\partial r_{k,d'}} \hat{n_{d'}} = \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \bigg\{ -\frac{1}{2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 \bigg\} \hat{n_{d'}} \\
+&= \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \bigg\{ -\frac{1}{2}  (r_{k,d'} - a_{Dk+d'})^2 \bigg\} \hat{n_{d'}} = \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  \\
+\nabla_k^2 \{A\} &= \nabla_k \cdot \nabla_k\{A\} = \nabla_k \cdot \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}} = \sum_{d=0}^{D-1} (-1) = -D\\ 
 \end{align*}
+
+
 \begin{align*}
 B_j(\vec{R}) &\equiv b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j}\\
-\nabla_k [B_j]  &= \sum_{d'=0}^{D-1} \frac{\partial B_j}{\partial r_{k,d'}} \hat{n}_{d'} = \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \right] \hat{n}_{d'}\\
+\nabla_k \{ B_j \}  &= \sum_{d'=0}^{D-1} \frac{\partial B_j}{\partial r_{k,d'}} \hat{n}_{d'} = \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \bigg\{ b_j + \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} \bigg\} \hat{n}_{d'}\\
 &= \sum_{d'=0}^{D-1} \frac{\partial}{\partial r_{k,d'}} \left[ r_{k,d'} W_{Dk+d',j} \right] \hat{n}_{d'} = \sum_{d=0}^{D-1} W_{Dk+d,j} \hat{n}_d \\
-\nabla_k^2 [B_j] &= 0\\
-B(\vec{R}) &\equiv \prod_{j=0}^{N-1} \left( 1 + \exp \left( B_j(\vec{R}) \right) \right)\\
-\nabla_k [B] &= \sum_{j=0}^{N-1} \nabla_k [1+\exp(B_j)] \prod_{j'\neq j} (1+\exp(B_{j'}))\\
-&= \sum_{j=0}^{N-1} \exp (B_j) \nabla_k [B_j] \prod_{j'\neq j} (1+\exp(B_{j'}))\\
-&= \sum_{j=0}^{N-1} \exp (B_j) \left( \sum_{d=0}^{D-1} W_{Dk+d,j} \hat{n}_d \right) \prod_{j'\neq j} (1+\exp(B_{j'}))\\
-&= \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right) \hat{n_d} \\
-\frac{\nabla_k[B]}{B} &= \frac{\sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right) \hat{n_d}}{\prod_{j'=0}^{N-1}(1+\exp(B_{j'}))}\\
-&= \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \frac{\exp(B_j)}{1+\exp(B_j)} \right) \hat{n_d}\\
-&= \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} \frac{W_{Dk+d,j}}{\exp(-B_j)+1} \right) \hat{n_d}\\
+\nabla_k^2 \{ B_j \} &= 0\\ \\
+B(\vec{R}) &\equiv \sum_{j=0}^{N-1} \ln \left(  1 + \exp \left( B_j (\vec{R}) \right) \right)\\
+\nabla_k \{ B \} &= \nabla_k \bigg\{ \sum_{j=0}^{N-1} \ln \left(  1 + \exp \left( B_j \right) \right) \bigg\}= \sum_{j=0}^{N-1}\nabla_k \bigg\{  \ln \left(  1 + \exp \left( B_j \right) \right) \bigg\} \\
+&=\sum_{j=0}^{N-1} \frac{1}{1+\exp(B_j)} \nabla_k \Big\{ 1+\exp(B_j) \Big\} 
+=\sum_{j=0}^{N-1} \frac{\exp(B_j)}{1+\exp(B_j)} \nabla_k \{ B_j \}\\
+&=\sum_{j=0}^{N-1} \frac{\nabla_k \{ B_j \}}{\exp(-B_j)+1}  = \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d \\
+\nabla_k^2 \{ B\} &= \nabla_k \cdot \nabla_k \{ B \} = \nabla_k \cdot \bigg\{  \sum_{j=0}^{N-1} \frac{\nabla_k \{ B_j \}}{\exp(-B_j)+1}  \bigg\}\\
+&= \sum_{j=0}^{N-1} \left[ \nabla_k \Big\{ \frac{1}{\exp(-B_j)+1} \Big\} \cdot \nabla_k \{ B_j \} + \frac{\nabla_k^2 \{ B_j \}}{\exp(-B_j)+1} \right]\\
+&= \sum_{j=0}^{N-1} \frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \nabla_k \{ B_j \} \cdot \nabla_k \{ B_j \}\\
+&= \sum_{j=0}^{N-1} \frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \sum_{d=0}^{D-1} W_{Dk+d,j}^2
+\end{align*}
+
+\begin{align*}
+r_{pq} &= \left( \sum_{d=0}^{D-1} (r_{p,d}-r_{q,d})^2 \right)^{1/2}\\
+\nabla_k \{ r_{pq} \} &= \frac{1}{2} \left( \sum_{d=0}^{D-1} (r_{p,d}-r_{q,d})^2 \right)^{-1/2} \nabla_k \bigg\{ \sum_{d=0}^{D-1} (r_{p,d}-r_{q,d})^2 \bigg\} \\
+&= \frac{1}{2 r_{pq}} \sum_{d=0}^{D-1} 2(r_{p,d}-r_{q,d})(\delta_{k,p}-\delta_{k,q}) \hat{n}_{d} = \frac{1}{r_{pq}} \sum_{d=0}^{D-1} (r_{p,d}-r_{q,d}) (\delta_{k,p}-\delta_{k,q}) \hat{n}_{d} \\ \\
+J(\vec{R}) &= \sum_{p<q} \ln \left( 1-\frac{a}{r_{pq}} \right)\\
+\nabla_k \{ J \} &= \sum_{p<q} \frac{1}{1-\frac{a}{r_{pq}}} \nabla_{k} \left( 1-\frac{a}{r_{pq}} \right) 
+= \sum_{p<q} \frac{r_{pq}}{r_{pq}-a} \frac{a}{r_{pq}^2} \nabla_k \{ r_{pq} \}\\
+&= \sum_{p<q} \frac{1}{r_{pq}-a} \frac{a}{r_{pq}} \frac{1}{r_{pq}} \sum_{d=0}^{D-1} (r_{p,d}-r_{q,d})(\delta_{k,p}-\delta_{k,q}) \hat{n}_{d}\\
+&= \sum_{d=0}^{D-1} \frac{1}{2} \sum_{p\neq q} \frac{(r_{p,d}-r_{q,d})(\delta_{k,p}-\delta_{k,q})}{r_{pq}^2(\frac{r_{pq}}{a}-1)} \hat{n}_d\\
+&= \sum_{d=0}^{D-1} \frac{1}{2} \left[ \sum_{q \neq k} \frac{r_{k,d}-r_{q,d}}{r_{kq}^2 \left( \frac{r_{kq}}{a} -1 \right)} - \sum_{k \neq k} \frac{r_{p,d}-r_{k,d}}{r_{pk}^2 \left( \frac{r_{pk}}{a} -1 \right)} \right]\hat{n}_d\\
+&= \sum_{d=0}^{D-1} \frac{1}{2} \left[2 \sum_{p \neq k} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \right]\hat{n}_d = \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d\\ 
+\nabla_k^2 \{ J \} &= \sum_{d'=0}^{D-1} \hat{n}_{d'} \frac{\partial}{\partial r_{k,d'}} \cdot \bigg\{ \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d  \bigg\} \\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{\partial}{\partial r_{k,d}} \bigg\{ \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \bigg\} \\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} 
+\left[ (r_{k,d}-r_{p,d})
+\frac{\partial}{\partial r_{k,d}} \bigg\{ r_{kp}^{-2}\left( \frac{r_{kp}}{a} -1 \right)^{-1} \bigg\} + \frac{\partial}{\partial r_{k,d}} \Big\{ r_{k,d}-r_{p,d}  \Big\} \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\right]\\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} 
+\left[ (r_{k,d}-r_{p,d})
+\left[ r_{kp}^{-2} \frac{\partial}{\partial r_{k,d}} \bigg\{ \left( \frac{r_{kp}}{a} -1 \right)^{-1} \bigg\} + \frac{\partial}{\partial r_{k,d}} \Big\{ r_{kp}^{-2} \Big\} \left( \frac{r_{kp}}{a} -1 \right)^{-1} \right]
+ + \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\right]\\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} 
+\left[ (r_{k,d}-r_{p,d})
+\left[ 
+\frac{-1}{a r_{kp}^2} \left( \frac{r_{kp}}{a} -1 \right)^{-2}
+ \frac{\partial}{\partial r_{k,d}} \Big\{ r_{kp} \Big\} 
++ \frac{-2}{r_{kp}^3}  \frac{\partial}{\partial r_{k,d}} \Big\{ r_{kp} \Big\} \left( \frac{r_{kp}}{a} -1 \right)^{-1} 
+\right] \right. \\
+& \hspace*{2.75cm}  \left.
+ + \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\right]\\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} 
+\left[ -\frac{(r_{k,d}-r_{p,d})}{r_{kp}^2} \left( \frac{r_{kp}}{a} -1 \right)^{-1}  \frac{\partial}{\partial r_{k,d}} \Big\{ r_{kp} \Big\}
+\left[ 
+\frac{1}{a} \left( \frac{r_{kp}}{a} -1 \right)^{-1} 
++ \frac{2}{r_{kp}}
+\right] 
++ \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\right]
 \end{align*}
 \begin{align*}
-\nabla_k^2[B] &= \nabla_k \cdot \nabla_k [B] \\
-&= \left( \sum_{d'=0}^{D-1} \hat{n_{d'}} \frac{\partial}{\partial r_{k,d'}} \right) \cdot \left[  \sum_{d=0}^{D-1} \left( \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right) \hat{n_d}\right] \\
-&= \sum_{d=0}^{D-1} \frac{\partial}{\partial r_{k,d}} \left[ \sum_{j=0}^{N-1} W_{Dk+d,j} \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right]  \\
-&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \frac{\partial}{\partial r_{k,d}} \left[  \exp(B_j)  \prod_{j'\neq j} (1+\exp(B_{j'})) \right]\\
-&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \left(  \exp(B_j) \frac{\partial}{\partial r_{k,d}} \left[  \prod_{j'\neq j} (1+\exp(B_{j'})) \right] + \frac{\partial}{\partial r_{k,d}} [\exp(B_j)]  \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
-&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \left( \exp(B_j) \sum_{j'=0,\ j'\neq j}^{N-1} \frac{\partial}{\partial r_{k,d}} [1+\exp(B_{j'})] \prod_{j''\neq j,j'} (1+\exp(B_{j''})) \right.\\
-& \hspace*{3.75cm} \left. + \exp(B_j) \frac{\partial}{\partial r_{k,d}} [B_j] \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
-&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) \frac{\partial}{\partial r_{k,d}} [B_{j'}] \prod_{j''\neq j,j'} (1+\exp(B_{j''})) \right.\\
-& \hspace*{5.25cm} \left. + \frac{\partial}{\partial r_{k,d}} [B_j] \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
-&= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) W_{Dk+d,j'} \prod_{j''\neq j,j'} (1+\exp(B_{j''})) \right.\\
-& \hspace*{5.25cm} \left. + W_{Dk+d,j} \prod_{j'\neq j} (1+\exp(B_{j'})) \right)\\
-\frac{\nabla_k^2[B]}{B} &= \sum_{d=0}^{D-1}\sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) W_{Dk+d,j'} \frac{\prod_{j''\neq j,j'} (1+\exp(B_{j''}))}{\prod_{j''=0}^{N-1}(1+\exp(B_{j''}))} \right.\\
-& \hspace*{5.25cm} \left. + W_{Dk+d,j} \frac{\prod_{j'\neq j} (1+\exp(B_{j'}))}{\prod_{j'=0}^{N-1}(1+\exp(B_{j'}))} \right)\\
-&= \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  W_{Dk+d,j} \exp(B_j) \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \exp(B_{j'}) W_{Dk+d,j'} \frac{1}{(1+\exp(B_j))(1+\exp(B_{j'}))} \right.\\
-& \hspace*{5.25cm} \left. + W_{Dk+d,j} \frac{1}{1+\exp(B_j)} \right)\\
-&= \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  W_{Dk+d,j} \frac{\exp(B_j)}{1+\exp(B_j)} \left( \sum_{j'=0,\ j'\neq j}^{N-1} W_{Dk+d,j'} \frac{\exp(B_{j'})}{1+\exp(B_{j'})} + W_{Dk+d,j} \right)\\
-&= \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dk+d,j}}{\exp(-B_j)+1} \left( \sum_{j'=0,\ j'\neq j}^{N-1} \frac{W_{Dk+d,j'}}{\exp(-B_{j'})+1} + W_{Dk+d,j} \right)\\
+\nabla_k^2\{ J \} 
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} 
+\left[ -\frac{(r_{k,d}-r_{p,d})}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}  \left( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \right)
+\left[ 
+\frac{1}{r_{kp}-a}
++ \frac{2}{r_{kp}}
+\right] 
++ \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\right]\\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\left[ 
+-\frac{(r_{k,d}-r_{p,d})^2}{r_{kp}} \left[ \frac{3r_{kp}-2a}{r_{kp}(r_{kp}-a)} \right] +1
+\right]\\
+&= \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\left[ 
+\left( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \right)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
+ +1
+\right]\\
 \end{align*}
+
 
 Putting all this together...
 \begin{align*}
-E_L &= \frac{1}{\Psi_{\vec{\theta}}(\vec{R})} \left[
-\frac{1}{2} \sum_{p = 0}^{P-1} \left( -\nabla_p^2 + \sum_{d=0}^{D-1} \omega_d^2 r_{p,d}^2 \right)  \right] \Psi_{\vec{\theta}}(\vec{R})\\
-&= \sum_{p=0}^{P-1} \left[  -\frac{1}{2} \left( \frac{\nabla_p^2[B]}{B} + 2\frac{\nabla_p[A]\nabla_p[B]}{B}+\nabla_p^2[A] + \left( \nabla_p[A] \right)^2 \right) + \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2
- \right]\\
- &= \sum_{p=0}^{P-1} \left[ -\frac{1}{2} \frac{\nabla_p^2[B]}{B} -\frac{\nabla_p[A]\nabla_p[B]}{B}-\frac{1}{2} \nabla_p^2[A] -\frac{1}{2} \left( \nabla_p[A] \right)^2 + \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2
- \right]\\
-&= \sum_{p=0}^{P-1} \left[
--\frac{1}{2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}}{\exp(-B_j)+1} \left( \sum_{j'=0,\ j'\neq j}^{N-1} \frac{W_{Dp+d,j'}}{\exp(-B_{j'})+1} + W_{Dp+d,j} \right) \right.\\
-& \hspace*{1.5cm} \left.
-- \left( \sum_{d'=0}^{D-1} (a_{Dp+d'} -r_{p,d'} ) \hat{n_{d'}} \right) \cdot \left( \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}}{\exp(-B_j)+1} \hat{n_d} \right) \right.\\
-& \hspace*{1.5cm} \left.
--\frac{1}{2} (-D)
--\frac{1}{2} \sum_{d=0}^{D-1} (a_{Dp+d} -r_{p,d} )^2
-+ \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2 \right]\\
-&= \sum_{p=0}^{P-1} \left[ -\frac{1}{2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}}{\exp(-B_j)+1} \left(  \sum_{j'=0,\ j'\neq j}^{N-1} \frac{W_{Dp+d,j'}}{\exp(-B_{j'})+1} + W_{Dp+d,j} \right) \right.\\
-& \hspace*{1.5cm} \left.
-- \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{(a_{Dp+d} -r_{p,d} ) W_{Dp+d,j}}{\exp(-B_j)+1}
-+\frac{D}{2}
--\frac{1}{2} \sum_{d=0}^{D-1} (a_{Dp+d} -r_{p,d} )^2
-+ \sum_{d=0}^{D-1} \frac{1}{2} \omega_d^2 r_{p,d}^2
- \right]\\
- &= \frac{PD}{2} +\sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \left[ -\frac{1}{2}  \sum_{j=0}^{N-1} \sum_{j'=0, \ j'\neq j}^{N-1} \frac{W_{Dp+d,j}W_{Dp+d,j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
--\frac{1}{2} \sum_{j=0}^{N-1} \frac{W_{Dp+d,j}^2}{\exp(-B_j)+1} \right.\\
-&\hspace*{3.4cm} \left. -\sum_{j=0}^{N-1} \frac{(a_{Dp+d} -r_{p,d} ) W_{Dp+d,j}}{\exp(-B_j)+1} - \frac{1}{2} (a_{Dp+d}-r_{p,d})^2 + \frac{1}{2} \omega_d^2 r_{p,d}^2 \right]
-\end{align*}
-In terms of the inputs $x_i$, $i = 0, ..., M-1$,
-\begin{align*}
-E_L &= \frac{M}{2} +\sum_{i=0}^{M-1} \left[ - \sum_{j=0}^{N-1} \sum_{j'<j} \frac{W_{i,j}W_{i,j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
--\frac{1}{2} \sum_{j=0}^{N-1} \frac{W_{i,j}^2}{\exp(-B_j)+1} \right.\\
-&\hspace*{2.75cm} \left. -\sum_{j=0}^{N-1} \frac{(a_{i} -x_i ) W_{i,j}}{\exp(-B_j)+1} - \frac{1}{2} (a_{i}-x_i)^2 + \frac{1}{2} \omega_{i\text{mod}D}^2 x_i^2 \right]\\
-&= \frac{M}{2} +\sum_{j=0}^{N-1} \left[ - \sum_{j'<j}\sum_{i=0}^{M-1} \frac{W_{i,j}W_{i,j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
--\frac{1}{2}\sum_{i=0}^{M-1} \frac{W_{i,j}^2}{\exp(-B_j)+1} - \sum_{i=0}^{M-1} \frac{(a_{i} -x_i ) W_{i,j}}{\exp(-B_j)+1}\right]\\
-&\hspace*{.5cm}+\sum_{i=0}^{M-1} \left[ - \frac{1}{2} (a_{i}-x_i)^2 + \frac{1}{2} \omega_{i\text{mod}D}^2 x_i^2 \right]\\
-&= \frac{M}{2} +\sum_{j=0}^{N-1} \left[ - \sum_{j'<j} \frac{\vec{W}_j\cdot \vec{W}_{j'}}{(\exp(-B_j)+1)(\exp(-B_{j'})+1)}
--\frac{1}{2} \frac{\vec{W}_j\cdot \vec{W}_j}{\exp(-B_j)+1} - \frac{(\vec{a}-\vec{x})\cdot \vec{W}_j }{\exp(-B_j)+1}\right]\\
-&\hspace*{.5cm}  - \frac{1}{2} (\vec{a}-\vec{x}) \cdot (\vec{a}-\vec{x}) + \frac{1}{2}  \sum_{i=0}^{M-1}\omega_{i\text{mod}D}^2 x_i^2 \\
-&= \frac{M}{2} -\sum_{j=0}^{N-1} \left[ \frac{\vec{W}_j}{\exp(-B_j)+1} \cdot \left( \sum_{j'<j} \frac{\vec{W}_{j'}}{\exp(-B_{j'})+1}
-+\frac{1}{2} \vec{W}_j +(\vec{a}-\vec{x})\right) \right]  - \frac{1}{2} \| \vec{a}-\vec{x}\|^2 + \frac{1}{2} (\Omega \% \Omega)\cdot (\vec{x} \% \vec{x}) \\
-\end{align*}
-In the last line, we have defined a vector $\vec{\Omega}$ with elements $\Omega_i = \omega_{i\text{mod}D}$. For more efficient computation of $E_L$ I will store the factors $f_j\equiv \frac{1}{\exp(-B_j)+1}$ in a vector $\vec{f}$ so that
-\begin{align*}
-E_L&= \frac{M}{2} -\sum_{j=0}^{N-1} \left[ f_j\vec{W}_j\cdot \left( \sum_{j'<j} f_{j'}\vec{W}_{j'}
-+\frac{1}{2} \vec{W}_j +(\vec{a}-\vec{x})\right) \right]  - \frac{1}{2} \| \vec{a}-\vec{x}\|^2 + \frac{1}{2} (\Omega \% \Omega)\cdot (\vec{x} \% \vec{x}) \\
+E_L &= \frac{1}{\Psi} \left[ \frac{1}{2} \sum_{p=0}^{P-1} -\nabla_p^2 + \frac{1}{2}\sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2 \right] \Psi \\
+&= -\frac{1}{2} \sum_{k=0}^{P-1} \frac{1}{\Psi} \nabla_k^2 \Psi + \frac{1}{2} \sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
+&= -\frac{1}{2} \sum_{k=0}^{P-1} 
+\bigg( \nabla_k^2 \{ A \}  + \nabla_k^2 \{ B \}  + \nabla_k^2 \{ J \} + \Big( \nabla_k \{ A \}  + \nabla_k \{ B \}  + \nabla_k \{ J \}\Big)^2 \bigg)
++ \frac{1}{2} \sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
+%%%%%%%%%%%%%%%%%%%%
+&= -\frac{1}{2} \sum_{k=0}^{P-1} 
+\Bigg( -D  + \sum_{j=0}^{N-1} \frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \sum_{d=0}^{D-1} W_{Dk+d,j}^2  \\
+& \hspace*{2.5 cm} 
++ \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+\left[ 
+\left( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \right)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
+ +1
+\right]\\
+& \hspace*{2.5 cm}
+ + \bigg( \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  
+ + \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d  
+ + \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d
+ \bigg)^2 \Bigg)\\
+& \hspace*{.5 cm} + \frac{1}{2} \sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
+%%%%%%%%%%%%%%%%%%%%
+&= -\frac{1}{2} \sum_{k=0}^{P-1} 
+\Bigg( \sum_{d=0}^{D-1} \bigg[ \sum_{j=0}^{N-1} \frac{\exp(-B_j)W_{Dk+d,j}^2}{(\exp(-B_j)+1)^2}
++ \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \big( \frac{r_{kp}}{a} -1 \big)}
+\Big[ 
+\Big( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \Big)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
+ +1
+\Big]  \bigg] \\
+& \hspace*{2.25 cm}
++ \bigg( \sum_{d=0}^{D-1} \bigg[
+(a_{Dk+d} -r_{k,d} )
++\sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}
++\sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+ \bigg] \hat{n_{d}}
+ \bigg)^2 \Bigg)\\
+& \hspace*{.5 cm} + \frac{PD}{2}+ \frac{1}{2}\sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
+%%%%%%%%%%%%%%%%%%%%
+&= -\frac{1}{2} \sum_{k=0}^{P-1} \sum_{d=0}^{D-1}
+\Bigg[  \sum_{j=0}^{N-1} \frac{\exp(-B_j)W_{Dk+d,j}^2}{(\exp(-B_j)+1)^2}
++ \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \big( \frac{r_{kp}}{a} -1 \big)}
+\Big[ 
+\Big( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \Big)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
+ +1
+\Big]  \\
+& \hspace*{2.25 cm}
++ \bigg( 
+(a_{Dk+d} -r_{k,d} )
++\sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}
++\sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
+ \bigg)^2  \Bigg]\\
+& \hspace*{.5 cm} + \frac{PD}{2}+\frac{1}{2} \sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
 \end{align*}
 
-\noindent For stochastic gradient descent, we will also need the gradient of the local energy with respect to the RBM parameters $\vec{\theta}$:
+\noindent To write $E_L$ in terms of the inputs $x_i$, we define the distance between the $k$th and $p$th particle as
 \begin{align*}
-G_k = \frac{\partial \langle E_L \rangle}{\partial \theta_k} = 2 \left( \left\langle E_L \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle - \left\langle E_L \right\rangle \left\langle \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle \right)
+R_i(p) &\equiv r_{kp}= \left( \sum_{d=0}^{D-1} (r_{k,d}-r_{p,d})^2 \right)^{1/2}\\
+ &= r_{(\text{floor}(i/D))p} 
+ = \left( \sum_{d=0}^{D-1} (x_{D(\text{floor}(i/D))+d}-x_{Dp+d})^2 \right)^{1/2}\\
 \end{align*}
+\noindent Then,
+\begin{align*}
+E_L &= -\frac{1}{2} \sum_{i=0}^{M-1}
+\Bigg[  \sum_{j=0}^{N-1} \frac{\exp(-B_j)W_{i,j}^2}{(\exp(-B_j)+1)^2}\\
+& \hspace*{2.25 cm}
++ a \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}  \frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}
+\Big[ 
+\Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}
+ +1
+\Big]  \\
+& \hspace*{2.25 cm}
++ \bigg( 
+(a_i -x_i )
++\sum_{j=0}^{N-1}  \frac{W_{i,j}}{\exp(-B_j)+1}
++a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
+ \bigg)^2  \Bigg]\\
+& \hspace*{.5 cm} + \frac{M}{2}+ \frac{1}{2} \sum_{i=0}^{M-1} \omega_{i\text{mod}D}^2x_i^2\\ \\ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+&=-\frac{1}{2} \sum_{j=0}^{N-1}\frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \sum_{i=0}^{M-1}W_{i,j}^2 \\
+& \hspace*{.5 cm}
+-\frac{a}{2} \sum_{i=0}^{M-1} \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}\frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}\Big[ \Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}+1\Big]  \\
+& \hspace*{.5 cm}
+-\frac{1}{2} \sum_{i=0}^{M-1} \bigg( 
+(a_i -x_i )
++\sum_{j=0}^{N-1}  \frac{W_{i,j}}{\exp(-B_j)+1}
++a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
+ \bigg)^2\\
+ & \hspace*{.5 cm} + \frac{M}{2}+\frac{1}{2} \sum_{i=0}^{M-1} \omega_{i\text{mod}D}^2x_i^2\\ \\ 
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+&=-\frac{1}{2} \sum_{j=0}^{N-1}\frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \vec{W}_j \cdot \vec{W}_j \\
+& \hspace*{.5 cm}
+-\frac{a}{2} \sum_{i=0}^{M-1} \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}\frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}\Big[ \Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}+1\Big]  \\
+& \hspace*{.5 cm}
+-\frac{1}{2} \sum_{i=0}^{M-1} \bigg( 
+(a_i -x_i )
++\sum_{j=0}^{N-1}  \frac{W_{i,j}}{\exp(-B_j)+1}
++a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
+ \bigg)^2\\
+ & \hspace*{.5 cm} + \frac{M}{2}+ \frac{1}{2}(\Omega\%\Omega)\cdot (\vec{x}\% \vec{x})\\ \\ 
+\end{align*}
+
+\noindent In the last line, we have defined a vector $\vec{\Omega}$ with elements $\Omega_i = \omega_{i\text{mod}D}$. To increase the computational speed, we will precalculate and store the values $B_j$ in a vector $\vec{B}$ and store the following factors in a vector $\vec{f} \in \mathbb{R}^{N}$:
+\begin{align*}
+f_j \equiv \frac{1}{\exp(-B_j)+1}
+\end{align*}
+
+\noindent Then, the local energy becomes
+\begin{align*}
+E_L &=-\frac{1}{2} \sum_{j=0}^{N-1}\exp(-B_j) \| f_j\vec{W}_j \|^2 + \frac{M}{2}+ \frac{1}{2}(\Omega\%\Omega)\cdot (\vec{x}\% \vec{x})\\
+& \hspace*{.5 cm}
+-\frac{a}{2} \sum_{i=0}^{M-1} \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}\frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}\Big[ \Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}+1\Big]  \\
+& \hspace*{.5 cm}
+-\frac{1}{2} \sum_{i=0}^{M-1} \bigg( 
+(a_i -x_i )
++\vec{W}_i^T\vec{f}
++a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
+ \bigg)^2\\
+\end{align*}
+
+\noindent For stochastic gradient descent, we will also need the gradient of the local energy with respect to the RBM parameters $\vec{\theta}=(\vec{a},\vec{b},\hat{W})$:
+\begin{align*}
+G_k = \frac{\partial \langle E_L \rangle}{\partial \theta_k} = 2 \left( \left\langle E_L \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle - \left\langle E_L \right\rangle \left\langle \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle \right)\\
+\end{align*}
+
+
 
 \noindent The derivatives of our new wavefunction with respect to the variational parameters are given by:
 \begin{align*}
-\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial a_k} &= \Psi_{\vec{\theta}} (x_k - a_k) 
-&\longrightarrow &\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial \vec{a}} = \Psi_{\vec{\theta}} (\vec{x}-\vec{a}) \\
-\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial b_k} &= \Psi_{\vec{\theta}} \frac{1}{\exp(-B_k)+1}
-&\longrightarrow &\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial \vec{b}} = \Psi_{\vec{\theta}} \vec{f} \\
-\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial W_{k,l}} &= \Psi_{\vec{\theta}} \frac{x_k}{\exp(-B_l)+1}
-&\longrightarrow &\frac{\partial \Psi_{\vec{\theta}}(\vec{R})}{\partial \vec{W}_j} = \Psi_{\vec{\theta}} f_j\vec{x} \\
+\frac{\partial \Psi}{\partial \vec{a}} &= \Psi \frac{\partial A(\vec{a})}{\partial \vec{a}} = \Psi (\vec{x}-\vec{a})\\
+\frac{\partial \Psi}{\partial \vec{b}} &= \Psi \frac{\partial B(\vec{b},\hat{W})}{\partial \vec{b}} = \Psi \vec{f} \\
+\frac{\partial \Psi}{\partial \hat{W}} &= \Psi \frac{\partial B(\vec{b},\hat{W})}{\partial \hat{W}}
+= \Psi \vec{x} \vec{f}^T
 \end{align*}
+
+
+\noindent The quantum force on the $k$th particle is defined as 
+\begin{align}
+\vec{F}_k(\vec{R}) = 2 \frac{1}{\Psi} \nabla_k \Psi.
+\end{align}
+
+\noindent Using the derivatives we have already calculated, we have
+\begin{align*}
+\vec{F}_k(\vec{R}) &= 2 \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)\\
+&= 2 \bigg( \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  
+ + \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d  
+ + \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d
+ \bigg)\\
+ &= 2 \sum_{d=0}^{D-1} \bigg[  (a_{Dk+d} -r_{k,d} ) 
+ + \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}    
+ +  a \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( r_{kp}-a \right)} 
+ \bigg]\hat{n}_d\\
+\end{align*}
+
+\noindent The Langevin and Fokker-Planck equations give a new position $y$ from the old position $x$:
+\begin{align}
+y = x + d\Delta tF(x) + \xi \sqrt{\Delta t},
+\end{align}
+where $d=0.5$ is the diffusion constant and $\Delta t \in [0.001,0.01]$ is a chosen time step. \\
+
+The transition probability is given by the Green's function
+\begin{align}
+G(y,x)=\frac{1}{(4\pi d \Delta t)^{3N/2}} \exp \left( -\frac{(y-x-d\Delta t F(x))^2}{4 d \Delta t} \right),
+\end{align}
+so that the Metropolis-Hastings acceptance ratio is
+\begin{align}
+A(y,x) = \min \{ 1, P(y,x) \},
+\end{align}
+where 
+\begin{align*}
+P(y,x) &= \frac{G(x,y) | \Psi_T(y) | ^2}{G(y,x) | \Psi_T(x) | ^2}\\
+&= \exp \left( -\frac{(x-y-d\Delta t F(y))^2}{4 d \Delta t} \right) \exp \left( \frac{(y-x-d\Delta t F(x))^2}{4 d \Delta t} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( -\frac{(x-y)^2-2(x-y)d\Delta t F(y) + d^2 \Delta t^2 F(y)^2}{4d\Delta t} \right)\\
+& \ \ \  \times \exp \left( \frac{(y-x)^2-2(y-x)d\Delta t F(x) + d^2 \Delta t^2 F(x)^2}{4d\Delta t} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( \frac{2(x-y)d\Delta t (F(y)+F(x)) + d^2 \Delta t^2 (F(x)^2-F(y)^2)}{4d\Delta t} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( \frac{2(x-y) (F(y)+F(x)) + d \Delta t (F(x)^2-F(y)^2)}{4} \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+&= \exp \left( \frac{1}{2}(x-y) (F(y)+F(x)) + \frac{1}{4} d \Delta t (F(x)^2-F(y)^2) \right) \frac{| \Psi_T(y) | ^2}{ | \Psi_T(x) | ^2}\\
+\end{align*}
+
+
 
 
 \end{document}

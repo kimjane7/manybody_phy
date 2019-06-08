@@ -46,9 +46,6 @@ public:
 	void random_new_position(int i);
 	double acceptance_ratio(int i);
 	double distance(mat r, int i, int j);
-
-	string alpha_string();
-
 };
 
 #endif
