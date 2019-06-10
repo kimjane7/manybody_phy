@@ -18,7 +18,8 @@ public:
 
 	int P_, D_, M_, N_;
 	ivec h_;
-	vec x_, a_, b_, B_, f_, Omega2_; 
+	vec x_, x_new_,
+	vec a_, b_, theta_, B_, f_, Omega2_; 
 	mat W_;
 
 	RBM(int number_particles, int number_hidden, vec omega);

@@ -1,52 +1,43 @@
 #include "RBM.h"
 
-RBM::RBM(int number_particles, int number_hidden, vec omega){
+RBM::RBM(int number_particles, int number_hidden, double hard_core_diameter, vec omega){
 
 	P_ = number_particles;
 	D_ = omega.n_elem;
 	M_ = P_*D_;
 	N_ = number_hidden;
-
-
-	// copied from boson_system
 	a0_ = hard_core_diameter;
-	E_ = 0.0;						   // mean energy
-	E_err_ = 0.0;					   // standard deviation of energy
-	timestep_ = 0.05;			       // Fokker-Planck equation parameters
-	diff_coeff_ = 0.5;
-	psi_ = 0.0;					       // trial wave function
-	psi_new_ = 0.0;
-	delta_E_.zeros(D_); 			   // mean gradient of energy
 
-
-	// set random initial positions, hidden layer, biases, and weights
-	arma::arma_rng::set_seed_random();
-	x_.randn(M_);
-	x_new_.zeros(M_);
-	h_ = randi<ivec>(N_, distr_param(0,1));
-	a_.randn(M_);
-	b_.randn(N_);
-	W_.randn(M_,N_);
-
-	// store B, f, and frequencies in vectors for faster computation 
-	// (see documentation - rbm.pdf)
-	B_.zeros(N_);
-	f_.zeros(N_);
-	store_factors();
 	Omega2_.zeros(M_);
 	for(int i = 0; i < M_; ++i){
 		Omega2_(i) = pow(omega(i%D_),2.0);
 	}
 
+	arma::arma_rng::set_seed_random();
+
+	E_ = 0.0;                          // mean energy
+	EL_ = 0.0;                         // local energy
+	E_err_ = 0.0;                      // standard deviation of energy
+	delta_E_.zeros(M_+N_+M_*N_);       // mean gradient of energy wrt variational params
+	timestep_ = 0.05;			       // Fokker-Planck equation time step
+	diff_coeff_ = 0.5;                 // Fokker-Planck equation diffusion coefficient
+
+	psi_ = 0.0;					       // trial wave function
+	psi_new_ = 0.0;
+	qforce_.zeros(M_);                 // quantum force
+	qforce_new_.zeros(M_);             
+
+	// precalculated quantities - see documentation (rbm.pdf)
+	B_.zeros(N_);                      // Bj's stored in vector   
+	f_.zeros(N_);                      // fj's stored in vector
 }
 
 // steepest gradient descent
 void RBM::steepest_gradient_descent(int number_MC_cycles, double tolerance, string filename){
 
 	int k = 0; 						   // number of iterations for convergence
-	double gammak = 1.0;               // step length
+	double gammak = 1.0;               // learning rate
 	double E_last;					   // place holder for gs energy of last iteration
-	alpha_ = alpha0;				   // initial variational parameters
 	E_ = 0.0;
 
 	// open file
@@ -54,7 +45,9 @@ void RBM::steepest_gradient_descent(int number_MC_cycles, double tolerance, stri
 	outfile.open(filename);
 	outfile << "# number of MC cycles = " << number_MC_cycles << endl;
 	outfile << "# tolerance = " << tolerance << endl;
-	outfile << "# E, E_error, gradient of E, variational parameters" << endl;
+
+	// initial variational parameters
+	set_initial_params();
 
 	// descend until difference in energy is less than tolerance
 	do{
@@ -65,21 +58,14 @@ void RBM::steepest_gradient_descent(int number_MC_cycles, double tolerance, stri
 		// calculate ground state energy and stats
 		variational_energy(number_MC_cycles);
 
-		// print stats and variational params
+		// print stats
 		outfile << left << setw(15) << setprecision(5) << E_;
 		outfile << left << setw(15) << setprecision(5) << E_err_;
+		outfile << left << setw(15) << setprecision(5) << norm(delta_E_) << endl;
 
-		for(int d = 0; d < D_; ++d){
-			outfile << left << setw(15) << setprecision(5) << delta_E_(d);
-		}
-		for(int d = 0; d < D_; ++d){
-			outfile << left << setw(15) << setprecision(5) << alpha_(d);
-		}
-		outfile << endl;
-
-		// use delta_E_ as approx. to gradient of local energy
-		// compute new suggestion for variational parameters
-		alpha_ -= gammak*delta_E_;
+		// update variational parameters
+		theta_ -= gammak*delta_E_;
+		separate_params();
 		
 		// count iterations
 		k += 1;
@@ -97,35 +83,34 @@ void RBM::variational_energy(int number_MC_cycles){
 
 	E_ = 0.0;
 	double E2 = 0.0, EL;
-	vec gradient_psi = zeros<vec>(D_);
-	vec delta_psi = zeros<vec>(D_);
-	vec delta_psiE = zeros<vec>(D_);
+	vec gradient_psi = zeros<vec>(M_+N_+M_*N_);
+	vec delta_psi = zeros<vec>(M_+N_+M_*N_);
+	vec delta_psiE = zeros<vec>(M_+N_+M_*N_);
 	
-	// randomly position particles
-	random_initial_positions();
+	// initial visible and hidden nodes
+	set_initial_nodes();
 
 	// calculate initial wave function and quantum force
-	psi_ = calc_trial_wavefunction(r_);
-	qforce_ = calc_quantum_force(r_);
-
+	psi_ = calc_trial_wavefunction(x_);
+	qforce_ = calc_quantum_force(x_);
 
 	// loop over monte carlo cycles
 	for(int m = 0; m < number_MC_cycles; ++m){
 
-		for(int i = 0; i < N_; ++i){
+		for(int k = 0; k < P_; ++k){
 
-			// move ith particle
-			random_new_position(i);
+			// move kth particle
+			random_new_position(k);
 
 			// calculate new wave function and quantum force
-			psi_new_ = calc_trial_wavefunction(r_new_);
-			qforce_new_ = calc_quantum_force(r_new_);
+			psi_new_ = calc_trial_wavefunction(x_new_);
+			qforce_new_ = calc_quantum_force(x_new_);
 
 			// Metropolis-Hastings test
-			if(rand01() <= acceptance_ratio(i)){
+			if(rand01() <= acceptance_ratio(k)){
 
-				r_.row(i) = r_new_.row(i);
-				qforce_.row(i) = qforce_new_.row(i);
+				x_ = x_new_;
+				qforce_ = qforce_new_;
 				psi_ = psi_new_;
 			}
 		}
@@ -146,58 +131,26 @@ void RBM::variational_energy(int number_MC_cycles){
 	delta_psi /= number_MC_cycles;
 	delta_psiE /= number_MC_cycles;
 
-	// check gradient E goes to zero?
+	// gradient of energy wrt variational parameters
 	delta_E_ = 2.0*(delta_psiE-delta_psi*E_);
-}
-
-
-// calculate trial wavefunction
-double RBM::calc_trial_wavefunction(mat r){
-
-	double psi = 1.0, sum = 0.0, rij;
-	vec ri2;
-
-	// no correlation part for a=0
-	if(a_ > 0.0){
-		for(int i = 0; i < N_; ++i){
-			for(int j = 0; j < N_; ++j){
-				if(i != j){
-
-					rij = distance(r,i,j);
-
-					if(rij <= a_) return 0.0;
-					else psi *= 1.0-a_/rij;
-				}
-			}
-		}
-	}
-
-	// elliptical harmonic oscillator part
-	for(int i = 0; i < N_; ++i){
-
-		ri2 = vectorise(r.row(i) % r.row(i));
-		sum += dot(alpha_,ri2);
-
-	}
-	psi *= exp(-sum);	
-
-	return psi;
 }
 
 // calculate local energy
 double RBM::calc_local_energy(){
 
 	int k, d;
-	double foo, denom, Rpi;
+	double foo, denom, Rpk;
 	double EL = M_ + dot(Omega2_,x_%x_);
-	
-	store_factors();
 
+	// precalculate f
+	store_factors(x_);
+	
 	for(int j = 0; j < N_; ++j){
 
 		EL -= exp(-B_(j))*pow(f_(j)*norm(W_.col(j)),2.0);
 	}
 
+	// calculate the rest of EL
 	for(int i = 0; i < M_; ++i){
 
 		foo = a_(i)-x_(i)+dot(vectorise(W_.row(i)),f_)
@@ -218,7 +171,6 @@ double RBM::calc_local_energy(){
 					
 					foo += a0_*(x_(i)-x_(D_*p+d))/denom;
 					EL -= (a0_/denom)*(pow((x_(i)-x_(D_*p+d)),2.0)*(2.0*a0_-3.0*Rpi)+1.0);
-
 				}
 			}
 
@@ -229,34 +181,60 @@ double RBM::calc_local_energy(){
 	return 0.5*EL;
 }
 
-// calculate quantum force for each particle
-mat RBM::calc_quantum_force(mat r){
+// calculate trial wavefunction
+double RBM::calc_trial_wavefunction(mat x){
 
-	double prefactor, rij;
-	rowvec Ri = zeros<rowvec>(D_);
-	rowvec Rj = zeros<rowvec>(D_);
-	mat qforce = zeros<mat>(N_,D_);
+	double Rpq, sum = 0.0;
 
-	for(int i = 0; i < N_; ++i){
+	// precalculate B
+	store_factors(x);
 
-		Ri = r.row(i);
-		qforce.row(i) = -4.0*(conv_to<rowvec>::from(alpha_)%Ri);
+	// interaction part
+	if(a0_ > 0.0){
+		for(int p = 0; p < P_; ++p){
+			for(int q = 0; q < p; ++q){
 
-		for(int j = 0; j < N_; ++j){
-			if(i != j){
+				Rpq = distance(x,p,q);
 
-				Rj = r.row(j);
-				rij = distance(r,i,j);
-				prefactor = a_/(rij*rij*(rij-a_));
-
-				qforce.row(i) += 2.0*prefactor*(Ri-Rj);				
+				if(Rpq <= a0_) return 0.0;
+				else sum += log(1.0-a0_/Rpq);
 			}
+		}
+	}
+
+	// RBM part
+	sum -= 0.5*pow(norm(x-a_),2.0);
+	for(int j = 0; j < N_; ++j){
+		sum += log(1.0+exp(B_(j)));
+	}
+
+	return exp(sum);
+}
+
+// calculate quantum force for each particle
+vec RBM::calc_quantum_force(mat x){
+
+	int k;
+	vec qforce = zeros<vec>(M_);
+
+	for(int i = 0; i < M_; ++i){
+
+		k = floor(i/D_);
+
+		qforce(i) = a_(i)-x_(i)+dot(vectorise(W_.row(i)),f_);
+
+		if(a0_ > 0.0){
+			
 		}
 
 	}
 
 	return qforce;
 }
+
+
+
+
 
 // calculate gradient of trial wavefunction wrt variational parameters
 vec RBM::calc_gradient_wavefunction(){
@@ -277,50 +255,14 @@ vec RBM::calc_gradient_wavefunction(){
 	return gradient_psi;
 }
 
-// calculate gradient of local energy wrt variational parameters
-vec RBM::calc_gradient_local_energy(){
-
-	double sum, rij;	
-	vec gradient_EL = zeros<vec>(D_);
-
-	// loop through components of gradient
-	for(int d = 0; d < D_; ++d){
-
-		sum = N_;
-
-		for(int i = 0; i < N_-1; ++i){
-
-			sum -= 4.0*alpha_(d)*r_(i,d)*r_(i,d);
-
-			for(int j = i+1; j < N_; ++j){
-
-				rij = distance(r_,i,j);
-				sum += 4.0*a_*r_(i,d)*(r_(i,d)-r_(j,d))/(rij*rij*(rij-a_));
-			}
-		}
-
-		gradient_EL(d) = sum;
-	}
-
-	return gradient_EL;
-}
-
-// set random initial positions
-void RBM::random_initial_positions(){
-
-	for(int i = 0; i < N_; ++i){
-		for(int j = 0; j < D_; ++j){
-			r_(i,j) = sqrt(timestep_)*randnorm();
-		}
-	}
-}
-
-// get new position of ith particle
-void RBM::random_new_position(int i){
+// get new position of kth particle
+void RBM::random_new_position(int k){
 
 	for(int d = 0; d < D_; ++d){
 		r_new_(i,d) = r_(i,d)+diff_coeff_*qforce_(i,d)*timestep_+randnorm()*sqrt(timestep_);
 	}
+
+
 }
 
 // acceptance ratio for Metropolis-Hastings algorithm
@@ -338,9 +280,8 @@ double RBM::acceptance_ratio(int i){
 }
 
 // distance between the kth and pth bosons
-double RBM::distance(mat x, int i, int p){
+double RBM::r(mat x, int k, int p){
 
-	int k = floor(i/D_);
 	double distance = 0.0;
 
 	for(int d = 0; d < D_; ++d){
@@ -350,36 +291,62 @@ double RBM::distance(mat x, int i, int p){
 	return sqrt(distance);
 }
 
-// store B and f
-void RBM::store_factors(){
+// store B and f for given x
+void RBM::store_factors(vec x){
 
 	for(int j = 0; j < N_-1; ++j){
 
-		B_(j) = b_(j) + dot(x_,W_.col(j));
+		B_(j) = b_(j) + dot(x,W_.col(j));
 		f_(j) = 1.0/(exp(-B_(j))+1.0);
 	}
-
 }
 
-/*
-// uniform int rng
-int RBM::randint(int max){
+// store all variational parameters a, b, W in one vector theta
+void RBM::combine_params(){
 
-	uniform_int_distribution<int> dist(0,max-1);
-	return dist(rng_);
+	int index;
+
+	theta_.head(M_) = a_;
+	theta_.subvec(M_,M_+N_-1) = b_;
+
+	// store weights column-wise
+	for(int j = 0; j < N_; ++j){
+		index = M_+N_+j*M_;
+		theta_.subvec(index,index+M_-1) = W_.col(j);
+	}
 }
 
-// uniform real rng
-double RBM::rand01(){
+// get variational parameters a, b, W from one vector theta
+void RBM::separate_params(){
 
-	uniform_real_distribution<double> dist(0.0,1.0);
-	return dist(rng_);
+	int index;
+
+	a_ = theta_.head(M_);
+	b_ = theta.subvec(M_,M_+N_-1);
+
+	// separate weights column-wise
+	for(int j = 0; j < N_; ++j){
+		index = M_+N_+j*M_;
+		W_.col(j) = theta_.subvec(index,index+M_-1);
+	}
 }
 
-// normal rng
-double RBM::randnorm(){
+void RBM::set_initial_nodes(){
 
-	normal_distribution<double> dist(0.0,1.0);
-	return dist(rng_);
+	x_.randn(M_);
+	x_new_.zeros(M_);
+	h_ = randi<ivec>(N_, distr_param(0,1));
 }
-*/
+
+// set random initial positions, hidden layer, biases, and weights
+void RBM::set_initial_params(){
+
+	// biases and weights
+	a_.randn(M_);
+	b_.randn(N_);
+	W_.randn(M_,N_);
+
+	// vectorized parameters
+	theta_ = zeros<vec>(M_+N_+M_*N_);
+	combine_params();
+}
