@@ -6,8 +6,8 @@ all: run
 
 
 
-run: main.o boson_system.o RBM.o
-	${CC} ${CFLAGS} main.o boson_system.o RBM.o -o run ${LIB}
+run: main.o RBM.o
+	${CC} ${CFLAGS} main.o RBM.o -o run ${LIB}
 
 
 
