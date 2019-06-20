@@ -367,13 +367,13 @@ G_k = \frac{\partial \langle E_L \rangle}{\partial \theta_k} = 2 \left( \left\la
 \noindent Using the derivatives we have already calculated, we have
 \begin{align*}
 \vec{F}_k(\vec{R}) &= 2 \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)\\
-&= 2 \bigg( \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  
- + \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d  
+&= 2 \bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  
+ + \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d  
  + \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d
  \bigg)\\
- &= 2 \sum_{d=0}^{D-1} \bigg[  (a_{Dk+d} -r_{k,d} ) 
- + \vec{W}_{Dk+d}^T\vec{f}   
- +  a \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( r_{kp}-a \right)} 
+ &= 2 \sum_{d=0}^{D-1} \bigg[ \frac{1}{\sigma^2} (a_{Dk+d} -r_{k,d} ) 
+ + \frac{1}{\sigma^2} \vec{W}_{Dk+d}^T\vec{f}   
++ \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
  \bigg]\hat{n}_d\\
 \end{align*}
 

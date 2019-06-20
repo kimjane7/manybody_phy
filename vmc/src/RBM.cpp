@@ -177,7 +177,7 @@ vec RBM::calc_quantum_force(vec x){
 
 	for(int i = 0; i < M_; ++i){
 
-		qforce(i) = a_(i)-x_(i)+dot(vectorise(W_.row(i)),f_);
+		qforce(i) = a_(i)-x(i)+dot(vectorise(W_.row(i)),f_);
 
 		if(a0_ > 0.0){
 
@@ -188,7 +188,7 @@ vec RBM::calc_quantum_force(vec x){
 				if(p != k){
 
 					Rpk = distance(x,p,k);
-					qforce(i) += a0_*(x_(i)-x_(D_*p+d))/(Rpk*Rpk*(Rpk-a0_));
+					qforce(i) += a0_*(x(i)-x(D_*p+d))/(Rpk*Rpk*(Rpk-a0_));
 				}
 			}
 		}
