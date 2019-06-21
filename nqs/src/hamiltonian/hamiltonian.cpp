@@ -28,11 +28,47 @@ void Hamiltonian::setup(bool coulomb_int, VectorXd omega){
     }
 }
 
+void Hamiltonian::add_coulomb_interaction(){
+
+    double R;
+
+    // loop over unique pairs
+    for(int p = 0; p < NQS_.P_-1; ++p){
+        for(int q = 0; q < NQS_.P_; ++q){
+
+            R = NQS_.distance(NQS_.x_,p,q);
+            EL_ += 1.0/R;
+        }
+    }
+}
+
+void Hamiltonian::add_hardcore_interaction(int i){
+
+    int p, d;
+    double R, denom;
+
+    p = floor(i/NQS_.D_);
+    d = i%NQS_.D_;
+
+    for(int q = 0; q < NQS_.P_; ++q){
+        if(p != q){
+
+            R = NQS_.distance(NQS_.x_,p,q);
+            denom = R*R*(R-a0_);
+
+            foo_ += a0_*(NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d))/denom;
+            EL_ -= (a0_/denom)*(pow((NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d)),2.0)*(2.0*a0_-3.0*R)/denom+1.0); 
+        }
+    }
+
+    EL_ -= foo_*foo_;
+}
+
 double Hamiltonian::calc_local_energy(){
 
     // precalculate B, sigmoidB, x2 for current x_
-    VectorXd B = NQS_.calc_B();
-    VectorXd sigmoidB = NQS_.calc_sigmoidB(B);
+    VectorXd B = NQS_.calc_B(NQS_.x_);
+    VectorXd sigmoidB = NQS_.calc_sigmoid(B);
     VectorXd x2 = (NQS_.x_.array()*NQS_.x_.array()).matrix();
 
     // calculate local energy
@@ -58,40 +94,36 @@ double Hamiltonian::calc_local_energy(){
     return EL_;    
 }
 
-void Hamiltonian::add_coulomb_interaction(){
+double Hamiltonian::calc_coulomb_jastrow_factor(VectorXd x){
 
-    double R;
+    double R, jastrow = 1.0;
 
     // loop over unique pairs
     for(int p = 0; p < NQS_.P_-1; ++p){
         for(int q = 0; q < NQS_.P_; ++q){
 
-            R = NQS_.distance(p,q);
-            EL_ += 1.0/R;
+            R = NQS_.distance(x,p,q);
+            jastrow *= exp(R);
         }
     }
+
+    return jastrow;
 }
 
-void Hamiltonian::add_hardcore_interaction(int i){
+double Hamiltonian::calc_hardcore_jastrow_factor(VectorXd x){
 
-    int p, d;
-    double R, denom;
+    double R, jastrow = 1.0;
 
-    p = floor(i/NQS_.D_);
-    d = i%NQS_.D_;
+    // loop over unique pairs
+    for(int p = 0; p < NQS_.P_-1; ++p){
+        for(int q = 0; q < NQS_.P_; ++q){
 
-    for(int q = 0; q < NQS_.P_; ++q){
-        if(p != q){
-
-            R = NQS_.distance(p,q);
-            denom = R*R*(R-a0_);
-
-            foo_ += a0_*(NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d))/denom;
-            EL_ -= (a0_/denom)*(pow((NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d)),2.0)*(2.0*a0_-3.0*R)/denom+1.0); 
+            R = NQS_.distance(x,p,q);
+            jastrow *= (1.0-a0_/R);
         }
     }
 
-    EL_ -= foo_*foo_;
+    return jastrow;
 }
 
 VectorXd Hamiltonian::calc_gradient_logpsi(){
@@ -99,8 +131,8 @@ VectorXd Hamiltonian::calc_gradient_logpsi(){
     int index;
 
     // precalculate B and sigmoidB for current x_
-    VectorXd B = NQS_.calc_B();
-    VectorXd sigmoidB = NQS_.calc_sigmoidB(B);
+    VectorXd B = NQS_.calc_B(NQS_.x_);
+    VectorXd sigmoidB = NQS_.calc_sigmoid(B);
 
     // calculate (gradient psi)/(psi) wrt all weights and biases
     VectorXd grad_logpsi(NQS_.M_+NQS_.N_+NQS_.M_*NQS_.N_);
@@ -119,38 +151,6 @@ VectorXd Hamiltonian::calc_gradient_logpsi(){
     return grad_logpsi;
 }
 
-VectorXd Hamiltonian::calc_quantum_force(int p){
-
-    int i;
-    double denom, R;
-
-    // precalculate B and sigmoidB for current x_
-    VectorXd B = NQS_.calc_B();
-    VectorXd sigmoidB = NQS_.calc_sigmoidB(B);
-
-    // calculate quantum force for pth particle only
-    VectorXd qforce(NQS_.D_);
-
-    for(int d = 0; d < NQS_.D_; ++d){
-
-        i = p*NQS_.D_+d;
-        qforce(d) = (NQS_.a_(i)-NQS_.x_(i)+NQS_.W_.row(i)*sigmoidB)/NQS_.sigma2_;
-
-        // interaction part
-        if(a0_ > 0.0){
-            for(int q = 0; q < NQS_.P_; ++q){
-                if(p != q){
-
-                    R = NQS_.distance(p,q);
-                    denom = R*R*(R/a0_-1.0);
-                    qforce(d) += (NQS_.x_(p*NQS_.D_+d)-NQS_.x_(q*NQS_.D_+d))/denom;
-                }
-            }
-        }
-    }
-
-    return 2.0*qforce;
-}
 
 VectorXd Hamiltonian::calc_quantum_force(int p, VectorXd x){
 
@@ -159,7 +159,7 @@ VectorXd Hamiltonian::calc_quantum_force(int p, VectorXd x){
 
     // precalculate B and sigmoidB for given x
     VectorXd B = NQS_.calc_B(x);
-    VectorXd sigmoidB = NQS_.calc_sigmoidB(B);
+    VectorXd sigmoidB = NQS_.calc_sigmoid(B);
 
     // calculate quantum force for pth particle only
     VectorXd qforce(NQS_.D_);
@@ -174,7 +174,7 @@ VectorXd Hamiltonian::calc_quantum_force(int p, VectorXd x){
             for(int q = 0; q < NQS_.P_; ++q){
                 if(p != q){
 
-                    R = NQS_.distance(p,q);
+                    R = NQS_.distance(NQS_.x_,p,q);
                     denom = R*R*(R/a0_-1.0);
                     qforce(d) += (x(p*NQS_.D_+d)-x(q*NQS_.D_+d))/denom;
                 }

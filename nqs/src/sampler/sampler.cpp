@@ -71,7 +71,7 @@ void Sampler::optimize(){
 
 		// calculate gradient
 		grad_EL = 2.0*(EL_grad_logpsi_mean-EL_mean*grad_logpsi_mean);
-		cout << cycles << "\t" << grad_EL.norm() << endl;
+		cout << cycles << "\t" << EL_mean << "\t" << grad_EL.norm() << endl;
 
 		// update weights
 		O_.optimize_weights(grad_EL, NQS_);

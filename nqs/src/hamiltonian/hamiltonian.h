@@ -9,7 +9,6 @@ class Hamiltonian{
 
 private:
 
-	bool coulomb_int_, bosons_;
 	double a0_, foo_, EL_;
 	VectorXd omega_, omega2_;
 
@@ -19,6 +18,7 @@ private:
 
 public:
 
+	bool coulomb_int_, bosons_;
 	NeuralQuantumState &NQS_;
 
 	Hamiltonian(bool coulomb_int, VectorXd omega, NeuralQuantumState &NQS);
@@ -26,8 +26,9 @@ public:
 	~Hamiltonian(){}
 
 	double calc_local_energy();
+	double calc_coulomb_jastrow_factor(VectorXd x);
+	double calc_hardcore_jastrow_factor(VectorXd x);
 	VectorXd calc_gradient_logpsi();
-	VectorXd calc_quantum_force(int p);
 	VectorXd calc_quantum_force(int p, VectorXd x);
 };
 

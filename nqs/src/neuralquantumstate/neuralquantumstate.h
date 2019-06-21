@@ -34,13 +34,10 @@ public:
     NeuralQuantumState(int n_particles, int n_hidden, int dimension, int seed, double sigma);
     ~NeuralQuantumState(){}
 
-    double calc_psi();
     double calc_psi(VectorXd x);
-    double distance(int p, int q);
     double distance(VectorXd x, int p, int q);
-    VectorXd calc_B();
     VectorXd calc_B(VectorXd x);
-    VectorXd calc_sigmoidB(VectorXd B);
+    VectorXd calc_sigmoid(VectorXd B);
 };
 
 #endif

@@ -71,18 +71,6 @@ void NeuralQuantumState::init_gaussian_weights(){
     }
 }
 
-double NeuralQuantumState::calc_psi(){
-
-    double psi = exp(-0.5*(x_-a_).squaredNorm()/sigma2_);
-
-    VectorXd B = calc_B();
-    for(int j = 0; j < N_; ++j){
-        psi *= (1.0+exp(B(j)));
-    }
-
-    return psi;
-}
-
 double NeuralQuantumState::calc_psi(VectorXd x){
 
     double psi = exp(-0.5*(x-a_).squaredNorm()/sigma2_);
@@ -93,17 +81,6 @@ double NeuralQuantumState::calc_psi(VectorXd x){
     }
 
     return psi;
-}
-
-double NeuralQuantumState::distance(int p, int q){
-
-    double R2 = 0.0;
-
-    for(int d = 0; d < D_; ++d){
-        R2 += pow(x_(D_*p+d)-x_(D_*q+d),2.0);
-    }
-
-    return sqrt(R2);
 }
 
 double NeuralQuantumState::distance(VectorXd x, int p, int q){
@@ -117,17 +94,13 @@ double NeuralQuantumState::distance(VectorXd x, int p, int q){
     return sqrt(R2);
 }
 
-VectorXd NeuralQuantumState::calc_B(){
-
-    return b_ + (x_.transpose()*W_).transpose()/sigma2_;
-}
 
 VectorXd NeuralQuantumState::calc_B(VectorXd x){
 
     return b_ + (x.transpose()*W_).transpose()/sigma2_;
 }
 
-VectorXd NeuralQuantumState::calc_sigmoidB(VectorXd B){
+VectorXd NeuralQuantumState::calc_sigmoid(VectorXd B){
 
     VectorXd sigmoidB(N_);
 

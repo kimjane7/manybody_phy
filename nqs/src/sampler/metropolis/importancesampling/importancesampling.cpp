@@ -18,7 +18,7 @@ void MetropolisImportanceSampling::get_trial_sample(){
 
     p_ = random_particle_index_(random_engine_);
     trialx_ = NQS_.x_;
-    qforce_ = H_.calc_quantum_force(p_);
+    qforce_ = H_.calc_quantum_force(p_, NQS_.x_);
 
     for(int d = 0; d < NQS_.D_; ++d){
 
