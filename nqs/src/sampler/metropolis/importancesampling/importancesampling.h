@@ -13,7 +13,6 @@ private:
 	double diffusion_, timestep_;
 	normal_distribution<double> norm01_;
 	VectorXd qforce_, trial_qforce_;
-	Hamiltonian H_;
 
 public:
 

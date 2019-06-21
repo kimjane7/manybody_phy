@@ -8,7 +8,8 @@ Sampler::Sampler(int seed, int n_cycles, int n_samples,
     random_engine_ = mt19937_64(seed);
     n_cycles_ = n_cycles;
     n_samples_ = n_samples;
-
+    outfile_.open(filename);
+    block_outfile_.open(block_filename);
 }
 
 void Sampler::optimize(){
@@ -72,5 +73,9 @@ void Sampler::optimize(){
 
 		// update weights
 		O_.optimize_weights(grad_EL, NQS_);
+
+		outfile_ << cycles << "\t" << EL_mean << "\t" << EL_var << "\t" << ratio_accepted << "\n";
 	}
+
+	outfile_.close();
 }
