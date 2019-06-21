@@ -8,13 +8,13 @@ using namespace Eigen;
 int main(){
 
 	// NQS parameters
-	int n_particles = 2;
+	int n_particles = 1;
 	int n_hidden = 8;
-	int dimension = 2;
+	int dimension = 1;
 	double sigma = 1.0;
 
 	// Hamiltonian parameters
-	bool coulomb = true;
+	bool coulomb = false;
 	//double hard_core_diameter = 0.0; 
 	VectorXd omega = VectorXd::Ones(dimension);
 
@@ -25,7 +25,7 @@ int main(){
 	// Sampler parameters
 	random_device rd;
 	int n_cycles = 10;
-	int n_samples = 100000;
+	int n_samples = 1000000;
 	double timestep = 0.01;
 	string filename = "test.dat";
 	string block_filename = "block_test.dat";
