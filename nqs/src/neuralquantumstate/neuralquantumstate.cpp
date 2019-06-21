@@ -29,7 +29,8 @@ void NeuralQuantumState::setup(int n_particles, int n_hidden, int dimension, dou
     b_.resize(N_);                // hidden bias
     W_.resize(M_,N_);             // weights
 
-    init_uniform_positions();
+    //init_uniform_positions();
+    init_gaussian_positions();
     init_gaussian_weights();
 }
 
@@ -43,10 +44,20 @@ void NeuralQuantumState::init_uniform_positions(){
     }
 }
 
+void NeuralQuantumState::init_gaussian_positions(){
+
+    normal_distribution<double> norm(0.0,sigma_);
+
+    for(int i = 0; i < M_; ++i){
+
+        x_(i) = norm(random_engine_);
+    }
+}
+
 void NeuralQuantumState::init_gaussian_weights(){
 
     double sigma_weights = 0.001;
-    normal_distribution<double> norm(0,sigma_weights);
+    normal_distribution<double> norm(0.0,sigma_weights);
 
     for(int i = 0; i < M_; ++i){
 
@@ -74,7 +85,7 @@ double NeuralQuantumState::calc_psi(){
 
 double NeuralQuantumState::calc_psi(VectorXd x){
 
-    double psi = exp(-0.5*(x_-a_).squaredNorm()/sigma2_);
+    double psi = exp(-0.5*(x-a_).squaredNorm()/sigma2_);
 
     VectorXd B = calc_B(x);
     for(int j = 0; j < N_; ++j){

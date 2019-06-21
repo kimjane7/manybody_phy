@@ -1,13 +1,28 @@
 #include "hamiltonian.h"
 
-Hamiltonian::Hamiltonian(double hard_core_diameter, VectorXd omega, NeuralQuantumState &NQS):
+Hamiltonian::Hamiltonian(bool coulomb_int, VectorXd omega, NeuralQuantumState &NQS):
     NQS_(NQS){
 
+    setup(coulomb_int, omega);
+}
+
+Hamiltonian::Hamiltonian(bool coulomb_int, double hard_core_diameter, VectorXd omega, NeuralQuantumState &NQS):
+    NQS_(NQS){
+
+    setup(coulomb_int, omega);
+
     a0_ = hard_core_diameter;
+    if(a0_ > 0.0) bosons_ = true;
+}
+
+void Hamiltonian::setup(bool coulomb_int, VectorXd omega){
+
+    coulomb_int_ = coulomb_int;
+    bosons_ = false;
     omega_ = omega;
 
     // construct omega2 vector
-    VectorXd omega2_(NQS_.M_);
+    omega2_.resize(NQS_.M_);
     for(int i = 0; i < NQS_.M_; ++i){
         omega2_(i) = pow(omega_(i%NQS_.D_),2.0);
     }
@@ -15,47 +30,68 @@ Hamiltonian::Hamiltonian(double hard_core_diameter, VectorXd omega, NeuralQuantu
 
 double Hamiltonian::calc_local_energy(){
 
-    int p, d;
-    double foo, denom, R;
-
-    // precalculate B and sigmoidB for current x_
+    // precalculate B, sigmoidB, x2 for current x_
     VectorXd B = NQS_.calc_B();
     VectorXd sigmoidB = NQS_.calc_sigmoidB(B);
+    VectorXd x2 = (NQS_.x_.array()*NQS_.x_.array()).matrix();
 
     // calculate local energy
-    double EL = NQS_.M_/NQS_.sigma2_ + omega2_.dot(NQS_.x_.cwiseProduct(NQS_.x_));
+    double EL_ = NQS_.M_/NQS_.sigma2_ + omega2_.transpose()*x2;
 
     for(int j = 0; j < NQS_.N_; ++j){
-
-        EL -= exp(-B(j))*(sigmoidB(j)*NQS_.W_.col(j)/NQS_.sigma2_).squaredNorm();
+        EL_ -= exp(-B(j))*(sigmoidB(j)*NQS_.W_.col(j)/NQS_.sigma2_).squaredNorm();
     }
 
     for(int i = 0; i < NQS_.M_; ++i){
 
-        foo = (NQS_.a_(i)-NQS_.x_(i))/NQS_.sigma2_ + NQS_.W_.row(i)*sigmoidB;
+        foo_ = (NQS_.a_(i)-NQS_.x_(i))/NQS_.sigma2_ + NQS_.W_.row(i)*sigmoidB;
 
-        // weak interaction
-        if(a0_ > 0.0){
+        // hard core interaction for dilute bosons
+        if(bosons_) add_hardcore_interaction(i);
+    }
 
-            p = floor(i/NQS_.D_);
-            d = i%NQS_.D_;
+    EL_ = 0.5*EL_;
 
-            for(int q = 0; q < NQS_.P_; ++q){
-                if(p != q){
+    // repulsive coulomb interaction
+    if(coulomb_int_) add_coulomb_interaction();
 
-                    R = NQS_.distance(p,q);
-                    denom = R*R*(R-a0_);
+    return EL_;    
+}
 
-                    foo += a0_*(NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d))/denom;
-                    EL -= (a0_/denom)*(pow((NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d)),2.0)*(2.0*a0_-3.0*R)/denom+1.0); 
-                }
-            }
+void Hamiltonian::add_coulomb_interaction(){
 
-            EL -= foo*foo;
+    double R;
+
+    // loop over unique pairs
+    for(int p = 0; p < NQS_.P_-1; ++p){
+        for(int q = 0; q < NQS_.P_; ++q){
+
+            R = NQS_.distance(p,q);
+            EL_ += 1.0/R;
+        }
+    }
+}
+
+void Hamiltonian::add_hardcore_interaction(int i){
+
+    int p, d;
+    double R, denom;
+
+    p = floor(i/NQS_.D_);
+    d = i%NQS_.D_;
+
+    for(int q = 0; q < NQS_.P_; ++q){
+        if(p != q){
+
+            R = NQS_.distance(p,q);
+            denom = R*R*(R-a0_);
+
+            foo_ += a0_*(NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d))/denom;
+            EL_ -= (a0_/denom)*(pow((NQS_.x_(i)-NQS_.x_(NQS_.D_*q+d)),2.0)*(2.0*a0_-3.0*R)/denom+1.0); 
         }
     }
 
-    return 0.5*EL;    
+    EL_ -= foo_*foo_;
 }
 
 VectorXd Hamiltonian::calc_gradient_logpsi(){
@@ -82,8 +118,6 @@ VectorXd Hamiltonian::calc_gradient_logpsi(){
 
     return grad_logpsi;
 }
-
-
 
 VectorXd Hamiltonian::calc_quantum_force(int p){
 

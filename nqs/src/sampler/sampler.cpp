@@ -39,11 +39,13 @@ void Sampler::optimize(){
 
 			sample(accepted);
 
-			// skip some samples
+			// skip first 10% of samples
 			if(samples > 0.1*n_samples_){
 
 				EL = H_.calc_local_energy();
 				grad_logpsi = H_.calc_gradient_logpsi();
+
+				//cout << samples << "\t" << accepted << "\t" << NQS_.distance(0,1) << endl;
 
 				// add up values for expectation values
 				EL_mean += EL;
@@ -69,7 +71,7 @@ void Sampler::optimize(){
 
 		// calculate gradient
 		grad_EL = 2.0*(EL_grad_logpsi_mean-EL_mean*grad_logpsi_mean);
-		cout << cycles << "\t" << grad_EL << endl;
+		cout << cycles << "\t" << grad_EL.norm() << endl;
 
 		// update weights
 		O_.optimize_weights(grad_EL, NQS_);

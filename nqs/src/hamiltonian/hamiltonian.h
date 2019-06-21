@@ -9,14 +9,20 @@ class Hamiltonian{
 
 private:
 
-	double a0_;
+	bool coulomb_int_, bosons_;
+	double a0_, foo_, EL_;
 	VectorXd omega_, omega2_;
+
+	void setup(bool coulomb_int, VectorXd omega);
+	void add_coulomb_interaction();
+	void add_hardcore_interaction(int i);
 
 public:
 
 	NeuralQuantumState &NQS_;
 
-	Hamiltonian(double hard_core_diameter, VectorXd omega, NeuralQuantumState &NQS);
+	Hamiltonian(bool coulomb_int, VectorXd omega, NeuralQuantumState &NQS);
+	Hamiltonian(bool coulomb_int, double hard_core_diameter, VectorXd omega, NeuralQuantumState &NQS);
 	~Hamiltonian(){}
 
 	double calc_local_energy();

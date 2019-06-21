@@ -1,6 +1,7 @@
 #ifndef NEURALQUANTUMSTATE_H
 #define NEURALQUANTUMSTATE_H
 
+#include <iostream>
 #include <random>
 #include <cmath>
 #include "../Eigen/Dense"
@@ -18,6 +19,7 @@ private:
 
     void setup(int n_particles, int n_hidden, int dimension, double sigma);
     void init_uniform_positions();
+    void init_gaussian_positions();
     void init_gaussian_weights();
 
 public:
