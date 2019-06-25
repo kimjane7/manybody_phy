@@ -18,11 +18,12 @@ private:
 
 public:
 
-	bool coulomb_int_, bosons_;
+	bool electrons_, bosons_;
 	NeuralQuantumState &NQS_;
 
-	Hamiltonian(bool coulomb_int, VectorXd omega, NeuralQuantumState &NQS);
-	Hamiltonian(bool coulomb_int, double hard_core_diameter, VectorXd omega, NeuralQuantumState &NQS);
+	Hamiltonian(VectorXd omega, NeuralQuantumState &NQS);
+	Hamiltonian(bool electrons, VectorXd omega, NeuralQuantumState &NQS);
+	Hamiltonian(double hard_core_diameter, VectorXd omega, NeuralQuantumState &NQS);
 	~Hamiltonian(){}
 
 	double calc_local_energy();
