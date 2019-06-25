@@ -9,7 +9,7 @@ int main(){
 
 	// NQS parameters
 	int n_particles = 1;
-	int n_hidden = 8;
+	int n_hidden = 4;
 	int dimension = 1;
 	double sigma = 1.0;
 
@@ -25,10 +25,9 @@ int main(){
 	// Sampler parameters
 	random_device rd;
 	int n_cycles = 10;
-	int n_samples = 1000000;
+	int n_samples = 10000000;
 	double timestep = 0.01;
 	string filename = "test.dat";
-	string block_filename = "block_test.dat";
 	
 	
 
@@ -36,7 +35,7 @@ int main(){
 	NeuralQuantumState NQS(n_particles, n_hidden, dimension, sigma);
 	Hamiltonian H(coulomb, omega, NQS);
 	StochasticGradientDescent Optimizer(n_params, learning_rate);
-	MetropolisImportanceSampling Sampler(rd(), n_cycles, n_samples, timestep, NQS, H, Optimizer, filename, block_filename);
+	MetropolisImportanceSampling Sampler(rd(), n_cycles, n_samples, timestep, NQS, H, Optimizer, filename);
 
 	Sampler.optimize();
 

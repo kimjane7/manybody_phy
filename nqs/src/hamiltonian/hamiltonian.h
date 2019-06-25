@@ -26,6 +26,7 @@ public:
 	~Hamiltonian(){}
 
 	double calc_local_energy();
+	double calc_psi(VectorXd x);
 	double calc_coulomb_jastrow_factor(VectorXd x);
 	double calc_hardcore_jastrow_factor(VectorXd x);
 	VectorXd calc_gradient_logpsi();

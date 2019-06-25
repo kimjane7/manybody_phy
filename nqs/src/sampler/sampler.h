@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include "../optimizer/optimizer.h"
 #include "../hamiltonian/hamiltonian.h"
 
@@ -16,7 +17,7 @@ protected:
 
     mt19937_64 random_engine_;
     int n_cycles_, n_samples_;
-    ofstream outfile_, block_outfile_;
+    ofstream outfile_;
 
 public:
 
@@ -24,9 +25,8 @@ public:
     Hamiltonian H_;
     Optimizer &O_;
 
-    Sampler(int seed, int n_cycles, int n_samples,
-            NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O,
-            string filename, string block_filename);
+    Sampler(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+            Hamiltonian &H, Optimizer &O, string filename);
     ~Sampler(){};
 
     void optimize();

@@ -15,7 +15,7 @@ public:
 
     MetropolisBruteForce(int seed, int n_cycles, int n_samples, double maxstep,
                          NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, 
-                         string filename, string block_filename);
+                         string filename);
 
     void get_trial_sample();
     double proposal_ratio();

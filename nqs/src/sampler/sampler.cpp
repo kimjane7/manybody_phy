@@ -1,15 +1,12 @@
 #include "sampler.h"
 
-Sampler::Sampler(int seed, int n_cycles, int n_samples, 
-	NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, 
-	string filename, string block_filename):
+Sampler::Sampler(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+	             Hamiltonian &H, Optimizer &O, string filename):
 	NQS_(NQS), H_(H), O_(O){
-
     random_engine_ = mt19937_64(seed);
     n_cycles_ = n_cycles;
     n_samples_ = n_samples;
     outfile_.open(filename);
-    block_outfile_.open(block_filename);
 }
 
 void Sampler::optimize(){
@@ -26,6 +23,19 @@ void Sampler::optimize(){
 
 	// FOR TESTING 1 PARTICLE 1 DIM CASE
 	double x_mean, x2_mean, x_var;
+
+
+	// print heading
+	outfile_ << setw(10) << "cycles" << "\t";
+	outfile_ << setw(10) << "EL mean" << "\t";
+	outfile_ << setw(10) << "EL var"  << "\t";
+	outfile_ << setw(10) << "ratio accepted" << "\n";
+
+	cout << setw(10) << "cycles" << "\t";
+	cout << setw(10) << "EL mean" << "\t";
+	cout << setw(10) << "norm(EL gradient)"  << "\t";
+	cout << setw(10) << "x mean"  << "\t";
+	cout << setw(10) << "x var" << "\n";
 
 	
 	// optimization iterations
@@ -89,15 +99,22 @@ void Sampler::optimize(){
 
 		// calculate gradient
 		grad_EL = 2.0*(EL_grad_logpsi_mean-EL_mean*grad_logpsi_mean);
-		cout << cycles << "\t" << EL_mean << "\t" << grad_EL.norm() << "\t" 
-		     << x_mean << "\t" << x_var << endl;
+
+
+		cout << setw(10) << cycles+1 << "\t";
+		cout << setw(10) << EL_mean << "\t";
+		cout << setw(10) << grad_EL.norm()  << "\t";
+		cout << setw(10) << x_mean  << "\t";
+		cout << setw(10) << x_var << "\n";
 
 		// update weights
 		O_.optimize_weights(grad_EL, NQS_);
 
 
-
-		outfile_ << cycles << "\t" << EL_mean << "\t" << EL_var << "\t" << ratio_accepted << "\n";
+		outfile_ << setw(10) << cycles+1 << "\t";
+		outfile_ << setw(10) << EL_mean << "\t";
+		outfile_ << setw(10) << EL_var  << "\t";
+		outfile_ << setw(10) << ratio_accepted << "\n";
 	}
 
 	outfile_.close();

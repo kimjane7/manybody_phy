@@ -94,20 +94,30 @@ double Hamiltonian::calc_local_energy(){
     return EL_;    
 }
 
+double Hamiltonian::calc_psi(VectorXd x){
+
+    double psi = NQS_.calc_psi(x);
+
+    if(bosons_) psi *= calc_hardcore_jastrow_factor(x);
+    if(coulomb_int_) psi *= calc_coulomb_jastrow_factor(x);
+
+    return psi;
+}
+
 double Hamiltonian::calc_coulomb_jastrow_factor(VectorXd x){
 
-    double R, jastrow = 1.0;
+    double R, jastrow = 0.0;
 
     // loop over unique pairs
     for(int p = 0; p < NQS_.P_-1; ++p){
         for(int q = 0; q < NQS_.P_; ++q){
 
             R = NQS_.distance(x,p,q);
-            jastrow *= exp(R);
+            jastrow += R;
         }
     }
 
-    return jastrow;
+    return exp(jastrow);
 }
 
 double Hamiltonian::calc_hardcore_jastrow_factor(VectorXd x){

@@ -1,8 +1,8 @@
 #include "bruteforce.h"
 
 MetropolisBruteForce::MetropolisBruteForce(int seed, int n_cycles, int n_samples, double maxstep,
-    NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, string filename, string block_filename):
-    Metropolis(seed, n_cycles, n_samples, NQS, H, O, filename, block_filename){
+    NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, string filename):
+    Metropolis(seed, n_cycles, n_samples, NQS, H, O, filename){
 
     maxstep_ = maxstep;
     random_step_ = uniform_real_distribution<double>(-1.0,1.0);

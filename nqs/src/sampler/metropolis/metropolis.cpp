@@ -1,9 +1,8 @@
 #include "metropolis.h"
 
-Metropolis::Metropolis(int seed, int n_cycles, int n_samples,
-    NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O,
-    string filename, string block_filename):
-    Sampler(seed, n_cycles, n_samples, NQS, H, O, filename, block_filename){
+Metropolis::Metropolis(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+                       Hamiltonian &H, Optimizer &O, string filename):
+    Sampler(seed, n_cycles, n_samples, NQS, H, O, filename){
 
     unif01_ = uniform_real_distribution<double>(0.0,1.0);
     random_particle_index_ = uniform_int_distribution<int>(0,NQS_.P_-1);

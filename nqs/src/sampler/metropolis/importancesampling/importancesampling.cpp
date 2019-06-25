@@ -1,9 +1,10 @@
 #include "importancesampling.h"
 
 
-MetropolisImportanceSampling::MetropolisImportanceSampling(int seed, int n_cycles, int n_samples, double timestep,
-    NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, string filename, string block_filename):
-    Metropolis(seed, n_cycles, n_samples, NQS, H, O, filename, block_filename){
+MetropolisImportanceSampling::MetropolisImportanceSampling(int seed, 
+    int n_cycles, int n_samples, double timestep, NeuralQuantumState &NQS, 
+    Hamiltonian &H, Optimizer &O, string filename):
+    Metropolis(seed, n_cycles, n_samples, NQS, H, O, filename){
 
     diffusion_ = 0.5;
     timestep_ = timestep;

@@ -22,9 +22,8 @@ protected:
 
 public:
 
-	Metropolis(int seed, int n_cycles, int n_samples,
-               NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O,
-               string filename, string block_filename);
+	Metropolis(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+		       Hamiltonian &H, Optimizer &O, string filename);
 	~Metropolis(){}
 
 	void sample(bool &accepted);
