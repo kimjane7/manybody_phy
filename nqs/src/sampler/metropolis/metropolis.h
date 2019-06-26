@@ -22,7 +22,7 @@ protected:
 
 public:
 
-	Metropolis(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+	Metropolis(int seed, int n_samples, double tolerance, NeuralQuantumState &NQS, 
 		       Hamiltonian &H, Optimizer &O, string filename);
 	~Metropolis(){}
 

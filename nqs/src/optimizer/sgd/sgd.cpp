@@ -6,7 +6,7 @@ StochasticGradientDescent::StochasticGradientDescent(int n_params, double learni
     eta_ = learning_rate;
 }
 
-void StochasticGradientDescent::optimize_weights(VectorXd gradient, NeuralQuantumState &NQS){
+void StochasticGradientDescent::optimize_weights(VectorXd gradient, NeuralQuantumState &NQS, Hamiltonian &H){
 
     int index;
 
@@ -18,4 +18,8 @@ void StochasticGradientDescent::optimize_weights(VectorXd gradient, NeuralQuantu
         index = NQS.M_+NQS.N_+j*NQS.M_;
         NQS.W_.col(j) -= eta_*gradient(seq(index,index+NQS.M_-1));
     }
+
+    H.NQS_.a_ = NQS.a_;
+    H.NQS_.b_ = NQS.b_;
+    H.NQS_.W_ = NQS.W_;
 }

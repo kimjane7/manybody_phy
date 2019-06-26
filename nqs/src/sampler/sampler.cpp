@@ -1,42 +1,42 @@
 #include "sampler.h"
 
-Sampler::Sampler(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+Sampler::Sampler(int seed, int n_samples, double tolerance, NeuralQuantumState &NQS, 
 	             Hamiltonian &H, Optimizer &O, string filename):
 	NQS_(NQS), H_(H), O_(O){
+
     random_engine_ = mt19937_64(seed);
-    n_cycles_ = n_cycles;
     n_samples_ = n_samples;
+    tolerance_ = tolerance;
     outfile_.open(filename);
+
+	// print heading
+	outfile_ << left << setw(15) << "cycles";
+	outfile_ << left << setw(20) << "EL mean";
+	outfile_ << left << setw(20) << "EL var";
+	outfile_ << left << setw(25) << "||EL gradient||";
+	outfile_ << left << setw(20) << "ratio accepted" << "\n";
+	outfile_ << scientific << setprecision(8) << setfill(' ');
 }
 
 void Sampler::optimize(){
 
 	bool accepted;
-	int n_accepted, n_samples_effective;
+	int n_accepted, n_samples_effective, cycles = 0;
 	double ratio_accepted;
 	double EL, EL2_mean, EL_var;
+
 	VectorXd grad_logpsi(O_.n_params_);
 	VectorXd grad_logpsi_mean(O_.n_params_);
 	VectorXd EL_grad_logpsi(O_.n_params_);
 	VectorXd EL_grad_logpsi_mean(O_.n_params_);
 	VectorXd grad_EL(O_.n_params_);
 
-	// print heading
-	outfile_ << setw(10) << "cycles" << "\t";
-	outfile_ << setw(10) << "EL mean" << "\t";
-	outfile_ << setw(10) << "EL var"  << "\t";
-	outfile_ << setw(10) << "||EL gradient||" << "\t";
-	outfile_ << setw(10) << "ratio accepted" << "\n";
-	cout << setw(10) << "cycles" << "\t";
-	cout << setw(10) << "EL mean" << "\t";
-	cout << setw(10) << "EL var" << "\t";
-	cout << setw(10) << "||EL gradient||" << "\t";
-	cout << setw(10) << "ratio accepted" << "\n";
 
 	
 	// optimization iterations
-	for(int cycles = 0; cycles < n_cycles_; ++cycles){
+	do{
 
+		cycles += 1;
 		n_accepted = 0;
 		n_samples_effective = 0;
 		EL_mean_ = 0.0;
@@ -81,20 +81,14 @@ void Sampler::optimize(){
 		grad_EL = 2.0*(EL_grad_logpsi_mean-EL_mean_*grad_logpsi_mean);
 
 		// update weights
-		O_.optimize_weights(grad_EL, NQS_);
+		O_.optimize_weights(grad_EL, NQS_, H_);
 
 		// print
-		outfile_ << setw(10) << cycles+1 << "\t";
-		outfile_ << setw(10) << EL_mean_ << "\t";
-		outfile_ << setw(10) << EL_var << "\t";
-		outfile_ << setw(10) << grad_EL.norm() << "\t";
-		outfile_ << setw(10) << ratio_accepted << "\n";
-		cout << setw(10) << cycles+1 << "\t";
-		cout << setw(10) << EL_mean_ << "\t";
-		cout << setw(10) << EL_var << "\t";
-		cout << setw(10) << grad_EL.norm() << "\t";
-		cout << setw(10) << ratio_accepted << "\n";
-	}
+		outfile_ << left << setw(15) << cycles;
+		outfile_ << left << setw(20) << setprecision(8) << EL_mean_;
+		outfile_ << left << setw(20) << EL_var;
+		outfile_ << left << setw(25) << grad_EL.norm();
+		outfile_ << left << setw(20) << ratio_accepted << "\n";
 
-	outfile_.close();
+	}while(grad_EL.norm() > tolerance_);
 }

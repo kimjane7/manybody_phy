@@ -29,8 +29,8 @@ void NeuralQuantumState::setup(int n_particles, int n_hidden, int dimension, dou
     b_.resize(N_);                // hidden bias
     W_.resize(M_,N_);             // weights
 
-    //init_uniform_positions();
-    init_gaussian_positions();
+    init_uniform_positions();
+    //init_gaussian_positions();
     init_gaussian_weights();
 }
 

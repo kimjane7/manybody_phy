@@ -1,8 +1,8 @@
 #include "metropolis.h"
 
-Metropolis::Metropolis(int seed, int n_cycles, int n_samples, NeuralQuantumState &NQS, 
+Metropolis::Metropolis(int seed, int n_samples, double tolerance, NeuralQuantumState &NQS, 
                        Hamiltonian &H, Optimizer &O, string filename):
-    Sampler(seed, n_cycles, n_samples, NQS, H, O, filename){
+    Sampler(seed, n_samples, tolerance, NQS, H, O, filename){
 
     unif01_ = uniform_real_distribution<double>(0.0,1.0);
     random_particle_index_ = uniform_int_distribution<int>(0,NQS_.P_-1);
@@ -21,6 +21,7 @@ void Metropolis::sample(bool &accepted){
     if(unif01_(random_engine_) < acceptance_ratio){
         accepted = true;
         NQS_.x_ = trialx_;
+        H_.NQS_.x_ = trialx_;
     }
     else{
         accepted = false;

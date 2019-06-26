@@ -16,7 +16,7 @@ private:
 
 public:
 
-    MetropolisImportanceSampling(int seed, int n_cycles, int n_samples, double timestep, 
+    MetropolisImportanceSampling(int seed, int n_samples, double tolerance, double timestep, 
     	                         NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, 
 								 string filename);
     ~MetropolisImportanceSampling(){}

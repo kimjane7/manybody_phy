@@ -13,7 +13,7 @@ private:
 
 public:
 
-    MetropolisBruteForce(int seed, int n_cycles, int n_samples, double maxstep,
+    MetropolisBruteForce(int seed, int n_samples, double tolerance, double maxstep,
                          NeuralQuantumState &NQS, Hamiltonian &H, Optimizer &O, 
                          string filename);
 

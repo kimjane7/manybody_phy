@@ -111,7 +111,7 @@ VectorXd Hamiltonian::calc_quantum_force(int p, VectorXd x){
     VectorXd qforce(NQS_.D_);
     for(int d = 0; d < NQS_.D_; ++d){
         i = NQS_.D_*p+d;
-        qforce(d) = NQS_.a_(i)-NQS_.x_(i)+NQS_.W_.row(i)*sigmoidB;
+        qforce(d) = NQS_.a_(i)-x(i)+NQS_.W_.row(i)*sigmoidB;
     }
     qforce /= NQS_.sigma2_;
 
@@ -120,11 +120,11 @@ VectorXd Hamiltonian::calc_quantum_force(int p, VectorXd x){
         for(int q = 0; q < NQS_.P_; ++q){
             if(q != p){
 
-                R = NQS_.distance(NQS_.x_,p,q);
+                R = NQS_.distance(x,p,q);
                 denom = R*R*(R/a0_-1.0);
 
                 for(int d = 0; d < NQS_.D_; ++d){
-                    qforce(d) += (NQS_.x_(NQS_.D_*p+d)-NQS_.x_(NQS_.D_*q+d))/denom;
+                    qforce(d) += (x(NQS_.D_*p+d)-x(NQS_.D_*q+d))/denom;
                 }
             }
         }
@@ -133,10 +133,10 @@ VectorXd Hamiltonian::calc_quantum_force(int p, VectorXd x){
         for(int q = 0; q < NQS_.P_; ++q){
             if(q != p){
 
-                R = NQS_.distance(NQS_.x_,p,q);
+                R = NQS_.distance(x,p,q);
 
                 for(int d = 0; d < NQS_.D_; ++d){
-                    qforce(d) += (NQS_.x_(NQS_.D_*p+d)-NQS_.x_(NQS_.D_*q+d))/R;
+                    qforce(d) += (x(NQS_.D_*p+d)-x(NQS_.D_*q+d))/R;
                 }                
             }
         }
