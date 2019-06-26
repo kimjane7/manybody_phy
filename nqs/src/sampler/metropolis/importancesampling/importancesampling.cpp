@@ -25,7 +25,7 @@ void MetropolisImportanceSampling::get_trial_sample(){
 
         i = p_*NQS_.D_+d;
         rand = norm01_(random_engine_);
-        trialx_(i) += diffusion_*qforce_(d)*timestep_ + rand*sqrt(timestep_);
+        trialx_(i) += diffusion_*timestep_*qforce_(d) + rand*sqrt(timestep_);
     }
 }
 

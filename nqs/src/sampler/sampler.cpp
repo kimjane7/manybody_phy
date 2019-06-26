@@ -14,28 +14,24 @@ void Sampler::optimize(){
 	bool accepted;
 	int n_accepted, n_samples_effective;
 	double ratio_accepted;
-	double EL, EL_mean, EL2_mean, EL_var;
+	double EL, EL2_mean, EL_var;
 	VectorXd grad_logpsi(O_.n_params_);
 	VectorXd grad_logpsi_mean(O_.n_params_);
 	VectorXd EL_grad_logpsi(O_.n_params_);
 	VectorXd EL_grad_logpsi_mean(O_.n_params_);
 	VectorXd grad_EL(O_.n_params_);
 
-	// FOR TESTING 1 PARTICLE 1 DIM CASE
-	double x_mean, x2_mean, x_var;
-
-
 	// print heading
 	outfile_ << setw(10) << "cycles" << "\t";
 	outfile_ << setw(10) << "EL mean" << "\t";
 	outfile_ << setw(10) << "EL var"  << "\t";
+	outfile_ << setw(10) << "||EL gradient||" << "\t";
 	outfile_ << setw(10) << "ratio accepted" << "\n";
-
 	cout << setw(10) << "cycles" << "\t";
 	cout << setw(10) << "EL mean" << "\t";
-	cout << setw(10) << "norm(EL gradient)"  << "\t";
-	cout << setw(10) << "x mean"  << "\t";
-	cout << setw(10) << "x var" << "\n";
+	cout << setw(10) << "EL var" << "\t";
+	cout << setw(10) << "||EL gradient||" << "\t";
+	cout << setw(10) << "ratio accepted" << "\n";
 
 	
 	// optimization iterations
@@ -43,14 +39,10 @@ void Sampler::optimize(){
 
 		n_accepted = 0;
 		n_samples_effective = 0;
-		EL_mean = 0.0;
+		EL_mean_ = 0.0;
 		EL2_mean = 0.0;
 		grad_logpsi_mean.setZero();
 		EL_grad_logpsi_mean.setZero();
-
-		// FOR TESTING 1 PARTICLE 1 DIM CASE
-		x_mean = 0.0;
-		x2_mean = 0.0;
 
 		// samples for estimating gradient
 		for(int samples = 0; samples < n_samples_; ++samples){
@@ -63,12 +55,8 @@ void Sampler::optimize(){
 				EL = H_.calc_local_energy();
 				grad_logpsi = H_.calc_gradient_logpsi();
 
-				//cout << samples << "\t" << accepted << "\t" << NQS_.x_ << endl;
-				x_mean += NQS_.x_(0);
-				x2_mean += NQS_.x_(0)*NQS_.x_(0);
-
 				// add up values for expectation values
-				EL_mean += EL;
+				EL_mean_ += EL;
 				EL2_mean += EL*EL;
 				grad_logpsi_mean += grad_logpsi;
 				EL_grad_logpsi_mean += EL*grad_logpsi;
@@ -80,41 +68,32 @@ void Sampler::optimize(){
 		}
 
 		// calculate expectation values
-		EL_mean /= n_samples_effective;
+		EL_mean_ /= n_samples_effective;
 		EL2_mean /= n_samples_effective;
 		grad_logpsi_mean /= n_samples_effective;
 		EL_grad_logpsi_mean /= n_samples_effective;
 
-
-		// FOR TESTING 1 PARTICLE 1 DIM CASE
-		x_mean /= n_samples_effective;
-		x2_mean /= n_samples_effective;
-		x_var = x2_mean-x_mean*x_mean;
-
-
-
 		// calculate variance and ratio accepted
-		EL_var = EL2_mean-EL_mean*EL_mean;
+		EL_var = EL2_mean-EL_mean_*EL_mean_;
 		ratio_accepted = n_accepted/(double)n_samples_effective;
 
 		// calculate gradient
-		grad_EL = 2.0*(EL_grad_logpsi_mean-EL_mean*grad_logpsi_mean);
-
-
-		cout << setw(10) << cycles+1 << "\t";
-		cout << setw(10) << EL_mean << "\t";
-		cout << setw(10) << grad_EL.norm()  << "\t";
-		cout << setw(10) << x_mean  << "\t";
-		cout << setw(10) << x_var << "\n";
+		grad_EL = 2.0*(EL_grad_logpsi_mean-EL_mean_*grad_logpsi_mean);
 
 		// update weights
 		O_.optimize_weights(grad_EL, NQS_);
 
-
+		// print
 		outfile_ << setw(10) << cycles+1 << "\t";
-		outfile_ << setw(10) << EL_mean << "\t";
-		outfile_ << setw(10) << EL_var  << "\t";
+		outfile_ << setw(10) << EL_mean_ << "\t";
+		outfile_ << setw(10) << EL_var << "\t";
+		outfile_ << setw(10) << grad_EL.norm() << "\t";
 		outfile_ << setw(10) << ratio_accepted << "\n";
+		cout << setw(10) << cycles+1 << "\t";
+		cout << setw(10) << EL_mean_ << "\t";
+		cout << setw(10) << EL_var << "\t";
+		cout << setw(10) << grad_EL.norm() << "\t";
+		cout << setw(10) << ratio_accepted << "\n";
 	}
 
 	outfile_.close();

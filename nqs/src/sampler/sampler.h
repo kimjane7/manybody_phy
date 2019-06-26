@@ -21,6 +21,7 @@ protected:
 
 public:
 
+    double EL_mean_;
     NeuralQuantumState NQS_;
     Hamiltonian H_;
     Optimizer &O_;

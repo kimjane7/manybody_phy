@@ -94,7 +94,7 @@ x_i &= r_{\text{floor}(i/D), i \text{mod} D}
 &= \frac{1}{Z} \exp  \Big( A(\vec{R})+ B(\vec{R}) \Big) \\ \\
 A(\vec{R}) &\equiv -\frac{1}{2\sigma^2} \sum_{p=0}^{P-1}\sum_{d=0}^{D-1} (r_{p,d} - a_{Dp+d})^2 = - \frac{1}{2\sigma^2}\sum_{i=0}^{M-1} (x_i-a_i)^2 = -\frac{1}{2\sigma^2} \| \vec{x} - \vec{a} \|^2\\
 B(\vec{R}) &\equiv \sum_{j=0}^{N-1} \ln \left(  1 + \exp \left( B_j (\vec{R}) \right) \right)\\
-B_j(\vec{R}) &\equiv b_j + \frac{1}{ \sigma^2}\sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} = b_j + \sum_{i=0}^{M-1} x_i W_{i,j} = b_j + \frac{1}{ \sigma^2} \vec{x}\cdot \vec{W}_j
+B_j(\vec{R}) &\equiv b_j + \frac{1}{ \sigma^2}\sum_{p=0}^{P-1}\sum_{d=0}^{D-1} r_{p,d} W_{Dp+d,j} = b_j +  \frac{1}{ \sigma^2} \sum_{i=0}^{M-1} x_i W_{i,j} = b_j + \frac{1}{ \sigma^2} \vec{x}\cdot \vec{W}_j
 \end{align*}
 
 \noindent If the particles are low-density bosons with a hard-core interaction:
@@ -231,6 +231,31 @@ J_B(\vec{R}) &= \sum_{p<q} \ln \left( 1-\frac{a}{r_{pq}} \right)\\
  \frac{(r_{k,d}-r_{p,d})^2 (2a-3r_{kp})}{r_{kp}^2(r_{kp}-a)}  + 1
  \Bigg] \\
 \end{align*}
+\begin{align*}
+\nabla_k^2 J_B &= a  \sum_{p=0, \ p\neq k}^{P-1}
+\frac{1}{r_{kp}^2(r_{kp}-a)}
+\sum_{d=0}^{D-1} \Bigg[ 
+ \frac{(r_{k,d}-r_{p,d})^2 (2a-3r_{kp})}{r_{kp}^2(r_{kp}-a)}  + 1
+ \Bigg] \\
+ %%%%%%%%%%%%%%%%%
+ &= a  \sum_{p=0, \ p\neq k}^{P-1}
+\frac{1}{r_{kp}^2(r_{kp}-a)} \Bigg[ 
+ \frac{(2a-3r_{kp})}{r_{kp}^2(r_{kp}-a)}\sum_{d=0}^{D-1} (r_{k,d}-r_{p,d})^2 + D
+ \Bigg] \\
+ %%%%%%%%%%%%%%%%%
+  &= a  \sum_{p=0, \ p\neq k}^{P-1}
+\frac{1}{r_{kp}^2(r_{kp}-a)} \Bigg[ 
+ \frac{(2a-3r_{kp})}{(r_{kp}-a)} + D
+ \Bigg] \\
+  %%%%%%%%%%%%%%%%%
+  &= a  \sum_{p=0, \ p\neq k}^{P-1}
+\frac{1}{r_{kp}^2(r_{kp}-a)} \Bigg[ 
+\frac{(2-D)a+(D-3)r_{kp}}{(r_{kp}-a)}
+ \Bigg] \\
+   %%%%%%%%%%%%%%%%%
+  &= a  \sum_{p=0, \ p\neq k}^{P-1}
+\frac{(2-D)a+(D-3)r_{kp}}{r_{kp}^2(r_{kp}-a)^2} \\
+\end{align*}
 
 \noindent For charged particles:
 \begin{align*}
@@ -281,7 +306,7 @@ E_L &= \frac{1}{\Psi} \left[ \frac{1}{2} \sum_{p=0}^{P-1} -\nabla_p^2 + \frac{1}
 \begin{align*}
 f_{j} = \frac{1}{\exp(-B_j)+1}
 \end{align*}
-in a vector $\vec{f} \in \mathbb{R}^N$. In the code, $\vec{f}$ is called sigmoid$B$. Also, store the squares of the frequencies and positions in vectors $\vec{\Omega^2}, \vec{x^2} \in \mathbb{R}^M$,
+in a vector $\vec{f} \in \mathbb{R}^N$. In the code, $\vec{f}$ is called \texttt{sigmoidB}. Also, store the squares of the frequencies and positions in vectors $\vec{\Omega^2}, \vec{x^2} \in \mathbb{R}^M$,
 \begin{align*}
 (\Omega^2)_i &= (\omega_{i \text{mod} D})^2\\
 (x^2)_i &= x_i^2
@@ -293,168 +318,59 @@ so that the last double sum in the local energy becomes a simple dot product.
 E_L &= \frac{M}{2\sigma^2} - \frac{1}{2} \sum_{j=0}^{N-1} \exp(-B_j) \bigg\| \frac{f_j \vec{W}_j}{\sigma^2} \bigg\|^2 - \frac{1}{2} \sum_{p=0}^{P-1} \nabla_p^2  J\\
 & \hspace*{5 mm} -\frac{1}{2} \sum_{p=0}^{P-1} \bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \Big( a_{Dp+d}-x_{Dp+d} + \vec{W}_{Dp+d}^T \vec{f} \  \Big) \hat{n}_d
  + \nabla_p  J \bigg)^2 + \frac{1}{2} \vec{\Omega^2} \cdot \vec{x^2}\\
-&= \frac{1}{2} \Bigg[ \frac{M}{\sigma^2} - \sum_{j=0}^{N-1} \exp(-B_j) \bigg\| \frac{f_j \vec{W}_j}{\sigma^2} \bigg\|^2 - \sum_{p=0}^{P-1} \nabla_p^2  J\\
-& \hspace*{5 mm} -\sum_{p=0}^{P-1} \bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \Big( a_{Dp+d}-x_{Dp+d} + \vec{W}_{Dp+d}^T \vec{f} \  \Big) \hat{n}_d
- + \nabla_p  J \bigg)^2 + \vec{\Omega^2} \cdot \vec{x^2} \Bigg] \\
+&= \frac{1}{2} \Bigg[ \frac{M}{\sigma^2} - \sum_{j=0}^{N-1} \exp(-B_j) \bigg\| \frac{f_j \vec{W}_j}{\sigma^2} \bigg\|^2 + \vec{\Omega^2} \cdot \vec{x^2} \Bigg]\\
+& \hspace*{5 mm} - \frac{1}{2} \sum_{p=0}^{P-1} \Bigg[  \nabla_p^2  J +\bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \Big( a_{Dp+d}-x_{Dp+d} + \vec{W}_{Dp+d}^T \vec{f} \  \Big) \hat{n}_d
+ + \nabla_p  J \bigg)^2 \Bigg] \\
 \end{align*}
 
-
-Putting all this together...
+\noindent The quantum force on the $p$th particle is defined as 
 \begin{align*}
-%%%%%%%%%%%%%%%%%%%%
-&= -\frac{1}{2} \sum_{k=0}^{P-1} 
-\Bigg( -\frac{D}{\sigma^2}  + \frac{1}{\sigma^4} \sum_{j=0}^{N-1} \frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \sum_{d=0}^{D-1} W_{Dk+d,j}^2  \\
-& \hspace*{2.5 cm} 
-+ \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
-\left[ 
-\left( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \right)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
- +1
-\right]\\
-& \hspace*{2.5 cm}
- + \bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  
- + \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d  
- + \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d
- \bigg)^2 \Bigg)\\
-& \hspace*{.5 cm} + \frac{1}{2} \sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
-%%%%%%%%%%%%%%%%%%%%
-&= -\frac{1}{2} \sum_{k=0}^{P-1} 
-\Bigg( \sum_{d=0}^{D-1} \bigg[ \frac{1}{\sigma^4} \sum_{j=0}^{N-1} \frac{\exp(-B_j)W_{Dk+d,j}^2}{(\exp(-B_j)+1)^2}
-+ \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \big( \frac{r_{kp}}{a} -1 \big)}
-\Big[ 
-\Big( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \Big)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
- +1
-\Big]  \bigg] \\
-& \hspace*{2.25 cm}
-+ \bigg( \sum_{d=0}^{D-1} \bigg[
-\frac{1}{\sigma^2}(a_{Dk+d} -r_{k,d} )
-+\frac{1}{\sigma^2}\sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}
-+\sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
- \bigg] \hat{n_{d}}
- \bigg)^2 \Bigg)\\
-& \hspace*{.5 cm} + \frac{PD}{2\sigma^2}+ \frac{1}{2}\sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
-%%%%%%%%%%%%%%%%%%%%
-&= -\frac{1}{2} \sum_{k=0}^{P-1} \sum_{d=0}^{D-1}
-\Bigg[ \frac{1}{\sigma^4} \sum_{j=0}^{N-1} \frac{\exp(-B_j)W_{Dk+d,j}^2}{(\exp(-B_j)+1)^2}
-+ \sum_{p=0, \ p\neq k}^{P-1}  \frac{1}{r_{kp}^2 \big( \frac{r_{kp}}{a} -1 \big)}
-\Big[ 
-\Big( \frac{r_{k,d}-r_{p,d}}{r_{kp}} \Big)^2 \frac{2a-3r_{kp}}{r_{kp}-a}
- +1
-\Big]  \\
-& \hspace*{2.25 cm}
-+ \bigg( 
-\frac{1}{\sigma^2}(a_{Dk+d} -r_{k,d} )
-+\frac{1}{\sigma^2}\sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}
-+\sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
- \bigg)^2  \Bigg]\\
-& \hspace*{.5 cm} + \frac{PD}{2\sigma^2}+\frac{1}{2} \sum_{p=0}^{P-1} \sum_{d=0}^{D-1} \omega_d^2r_{p,d}^2\\
+\vec{F}_p(\vec{R}) = 2 \frac{1}{\Psi} \nabla_p \Psi.
 \end{align*}
 
-\noindent To write $E_L$ in terms of the inputs $x_i$, we define the distance between the $k$th and $p$th particle as
+\noindent Using the derivatives we have already calculated, we have
+
 \begin{align*}
-R_i(p) &\equiv r_{kp}= \left( \sum_{d=0}^{D-1} (r_{k,d}-r_{p,d})^2 \right)^{1/2}\\
- &= r_{(\text{floor}(i/D))p} 
- = \left( \sum_{d=0}^{D-1} (x_{D(\text{floor}(i/D))+d}-x_{Dp+d})^2 \right)^{1/2}\\
-\end{align*}
-\noindent Then,
-\begin{align*}
-E_L &= -\frac{1}{2} \sum_{i=0}^{M-1}
-\Bigg[ \frac{1}{\sigma^4} \sum_{j=0}^{N-1} \frac{\exp(-B_j)W_{i,j}^2}{(\exp(-B_j)+1)^2}\\
-& \hspace*{2.25 cm}
-+ a \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}  \frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}
-\Big[ 
-\Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}
- +1
-\Big]  \\
-& \hspace*{2.25 cm}
-+ \bigg( 
-\frac{1}{\sigma^2} (a_i -x_i )
-+\frac{1}{\sigma^2} \sum_{j=0}^{N-1}  \frac{W_{i,j}}{\exp(-B_j)+1}
-+a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
- \bigg)^2  \Bigg]\\
-& \hspace*{.5 cm} + \frac{M}{2\sigma^2}+ \frac{1}{2} \sum_{i=0}^{M-1} \omega_{i\text{mod}D}^2x_i^2\\ \\ 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-&=-\frac{1}{2\sigma^4} \sum_{j=0}^{N-1}\frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \sum_{i=0}^{M-1}W_{i,j}^2 \\
-& \hspace*{.5 cm}
--\frac{a}{2} \sum_{i=0}^{M-1} \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}\frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}\Big[ \Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}+1\Big]  \\
-& \hspace*{.5 cm}
--\frac{1}{2} \sum_{i=0}^{M-1} \bigg( 
-\frac{1}{\sigma^2}(a_i -x_i )
-+\frac{1}{\sigma^2} \sum_{j=0}^{N-1}  \frac{W_{i,j}}{\exp(-B_j)+1}
-+a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
- \bigg)^2\\
- & \hspace*{.5 cm} + \frac{M}{2\sigma^2}+\frac{1}{2} \sum_{i=0}^{M-1} \omega_{i\text{mod}D}^2x_i^2\\ \\ 
- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-&=-\frac{1}{2\sigma^4} \sum_{j=0}^{N-1}\frac{\exp(-B_j)}{(\exp(-B_j)+1)^2} \vec{W}_j \cdot \vec{W}_j \\
-& \hspace*{.5 cm}
--\frac{a}{2} \sum_{i=0}^{M-1} \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}\frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}\Big[ \Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}+1\Big]  \\
-& \hspace*{.5 cm}
--\frac{1}{2} \sum_{i=0}^{M-1} \bigg( 
-\frac{1}{\sigma^2} (a_i -x_i )
-+\frac{1}{\sigma^2} \sum_{j=0}^{N-1}  \frac{W_{i,j}}{\exp(-B_j)+1}
-+a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
- \bigg)^2\\
- & \hspace*{.5 cm} + \frac{M}{2\sigma^2}+ \frac{1}{2}(\Omega\%\Omega)\cdot (\vec{x}\% \vec{x})\\ \\ 
+\vec{F}_p(\vec{R}) &= 2 \Big( \nabla_p A + \nabla_p B +\nabla_p J \Big)\\
+&= 2\bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \Big( a_{Dp+d}-x_{Dp+d} + \vec{W}_{Dp+d}^T \vec{f} \  \Big) \hat{n}_d
+ + \nabla_p  J \bigg)\\
 \end{align*}
 
-\noindent In the last line, we have defined a vector $\vec{\Omega}$ with elements $\Omega_i = \omega_{i\text{mod}D}$. To increase the computational speed, we will precalculate and store the values $B_j$ in a vector $\vec{B}$ and store the following factors in a vector $\vec{f} \in \mathbb{R}^{N}$:
+\noindent Notice that the quantum force on the $p$th particle $\vec{F}_p$ simplifies our expression for the local energy:
+
 \begin{align*}
-f_j \equiv \frac{1}{\exp(-B_j)+1}
+E_L &= \frac{1}{2} \Bigg[ \frac{M}{\sigma^2} - \sum_{j=0}^{N-1} \exp(-B_j) \bigg\| \frac{f_j \vec{W}_j}{\sigma^2} \bigg\|^2 + \vec{\Omega^2} \cdot \vec{x^2} \Bigg]\\
+& \hspace*{5 mm} - \frac{1}{2} \sum_{p=0}^{P-1} \Bigg[  \nabla_p^2  J +\bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \Big( a_{Dp+d}-x_{Dp+d} + \vec{W}_{Dp+d}^T \vec{f} \  \Big) \hat{n}_d
+ + \nabla_p  J \bigg)^2 \Bigg] \\
+ &= \frac{1}{2} \Bigg[ \frac{M}{\sigma^2} - \sum_{j=0}^{N-1} \exp(-B_j) \bigg\| \frac{f_j \vec{W}_j}{\sigma^2} \bigg\|^2 + \vec{\Omega^2} \cdot \vec{x^2} - \sum_{p=0}^{P-1} \bigg(  \nabla_p^2  J + \bigg\|\frac{1}{2} \vec{F}_p \bigg\|^2 \bigg) \Bigg] \\
 \end{align*}
 
-\noindent Then, the local energy becomes
-\begin{align*}
-E_L &=-\frac{1}{2} \sum_{j=0}^{N-1}\exp(-B_j) \Big\| \frac{f_j\vec{W}_j}{\sigma^2} \Big\|^2 + \frac{M}{2\sigma^2}+ \frac{1}{2}(\Omega\%\Omega)\cdot (\vec{x}\% \vec{x})\\
-& \hspace*{.5 cm}
--\frac{a}{2} \sum_{i=0}^{M-1} \sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1}\frac{1}{R_i(p)^2 \big( R_i(p)-a \big)}\Big[ \Big( \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)} \Big)^2 \frac{2a-3R_i(p)}{R_i(p)-a}+1\Big]  \\
-& \hspace*{.5 cm}
--\frac{1}{2} \sum_{i=0}^{M-1} \bigg( 
-\frac{1}{\sigma^2}(a_i -x_i )
-+\frac{1}{\sigma^2} \vec{W}_i^T\vec{f}
-+a\sum_{p=0, \ p\neq \text{floor}(i/D)}^{P-1} \frac{x_i-x_{Dp+(i\text{mod}D)}}{R_i(p)^2 \left( R_i(p) -a \right)}
- \bigg)^2\\
-\end{align*}
 
 \noindent For stochastic gradient descent, we will also need the gradient of the local energy with respect to the RBM parameters $\vec{\theta}=(\vec{a},\vec{b},\hat{W})$:
 \begin{align*}
-G_k = \frac{\partial \langle E_L \rangle}{\partial \theta_k} = 2 \left( \left\langle E_L \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle - \left\langle E_L \right\rangle \left\langle \frac{1}{\Psi} \frac{\partial \Psi}{\partial \theta_k} \right\rangle \right)\\
+\frac{\partial \langle E_L \rangle}{\partial \theta_k} = 2 \left( \left\langle E_L \frac{1}{\Psi_T} \frac{\partial \Psi_T}{\partial \theta_k} \right\rangle - \left\langle E_L \right\rangle \left\langle \frac{1}{\Psi_T} \frac{\partial \Psi_T}{\partial \theta_k} \right\rangle \right)= 2 \left( \left\langle E_L \frac{\partial \ln \Psi_T}{\partial \theta_k} \right\rangle - \left\langle E_L \right\rangle \left\langle \frac{\partial \ln \Psi_T}{\partial \theta_k} \right\rangle \right)\\
 \end{align*}
 
 
 
 \noindent The derivatives of our new wavefunction with respect to the variational parameters are given by:
 \begin{align*}
-\frac{\partial \Psi}{\partial \vec{a}} &= \Psi \frac{\partial A(\vec{a})}{\partial \vec{a}} = \Psi \frac{\vec{x}-\vec{a}}{\sigma^2}\\
-\frac{\partial \Psi}{\partial \vec{b}} &= \Psi \frac{\partial B(\vec{b},\hat{W})}{\partial \vec{b}} = \Psi \vec{f} \\
-\frac{\partial \Psi}{\partial \hat{W}} &= \Psi \frac{\partial B(\vec{b},\hat{W})}{\partial \hat{W}}
-= \Psi \frac{\vec{x} \vec{f}^T}{\sigma^2}
+\frac{\partial \ln  \Psi_T}{\partial \vec{a}} &= \frac{\partial A(\vec{a})}{\partial \vec{a}} = \frac{\vec{x}-\vec{a}}{\sigma^2}\\
+\frac{\partial \ln \Psi_T}{\partial \vec{b}} &=  \frac{\partial B(\vec{b},\hat{W})}{\partial \vec{b}} =  \vec{f} \\
+\frac{\partial \ln \Psi_T}{\partial \hat{W}} &=  \frac{\partial B(\vec{b},\hat{W})}{\partial \hat{W}}
+= \frac{\vec{x} \vec{f}^T}{\sigma^2}
 \end{align*}
 
 
-\noindent The quantum force on the $k$th particle is defined as 
-\begin{align}
-\vec{F}_k(\vec{R}) = 2 \frac{1}{\Psi} \nabla_k \Psi.
-\end{align}
 
-\noindent Using the derivatives we have already calculated, we have
-\begin{align*}
-\vec{F}_k(\vec{R}) &= 2 \Big( \nabla_k \{ A \} + \nabla_k \{ B \} +\nabla_k \{ J \} \Big)\\
-&= 2 \bigg( \frac{1}{\sigma^2} \sum_{d=0}^{D-1} (a_{Dk+d} -r_{k,d} ) \hat{n_{d}}  
- + \frac{1}{\sigma^2} \sum_{d=0}^{D-1} \sum_{j=0}^{N-1}  \frac{W_{Dk+d,j}}{\exp(-B_j)+1}   \hat{n}_d  
- + \sum_{d=0}^{D-1} \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)} \hat{n}_d
- \bigg)\\
- &= 2 \sum_{d=0}^{D-1} \bigg[ \frac{1}{\sigma^2} (a_{Dk+d} -r_{k,d} ) 
- + \frac{1}{\sigma^2} \vec{W}_{Dk+d}^T\vec{f}   
-+ \sum_{p=0, \ p\neq k}^{P-1} \frac{r_{k,d}-r_{p,d}}{r_{kp}^2 \left( \frac{r_{kp}}{a} -1 \right)}
- \bigg]\hat{n}_d\\
-\end{align*}
+
+
 
 \noindent The Langevin and Fokker-Planck equations give a new position $y$ from the old position $x$:
 \begin{align}
 y = x + d\Delta tF(x) + \xi \sqrt{\Delta t},
 \end{align}
-where $d=0.5$ is the diffusion constant and $\Delta t \in [0.001,0.01]$ is a chosen time step. \\
-
-The transition probability is given by the Green's function
+where $d=0.5$ is the diffusion constant and $\Delta t \in [0.001,0.01]$ is a chosen time step. The transition probability is given by the Green's function
 \begin{align}
 G(y,x)=\frac{1}{(4\pi d \Delta t)^{3N/2}} \exp \left( -\frac{(y-x-d\Delta t F(x))^2}{4 d \Delta t} \right),
 \end{align}

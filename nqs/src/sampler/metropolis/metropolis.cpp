@@ -29,18 +29,8 @@ void Metropolis::sample(bool &accepted){
 
 double Metropolis::probability_ratio(){
 
-    double psi = NQS_.calc_psi(NQS_.x_);
-    double trialpsi = NQS_.calc_psi(trialx_);
-
-    if(H_.coulomb_int_){
-        psi *= H_.calc_coulomb_jastrow_factor(NQS_.x_);
-        trialpsi *= H_.calc_coulomb_jastrow_factor(trialx_);
-    }
-
-    if(H_.bosons_){
-        psi *= H_.calc_hardcore_jastrow_factor(NQS_.x_);
-        trialpsi *= H_.calc_hardcore_jastrow_factor(trialx_);
-    }
+    double psi = H_.calc_psi(NQS_.x_);
+    double trialpsi = H_.calc_psi(trialx_);
 
     return pow(trialpsi/psi,2.0);
 }
