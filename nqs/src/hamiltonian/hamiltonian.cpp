@@ -44,9 +44,11 @@ double Hamiltonian::calc_local_energy(){
     VectorXd sigmoidB = NQS_.calc_sigmoid(B);
     VectorXd x2 = (NQS_.x_.array()*NQS_.x_.array()).matrix();
 
-    // calculate local energy
-    double EL = NQS_.M_/NQS_.sigma2_ + omega2_.transpose()*x2;
+    // harmonic oscillator part
+    double EL = omega2_.transpose()*x2;
 
+    // kinetic part
+    EL += NQS_.M_/NQS_.sigma2_;
     for(int j = 0; j < NQS_.N_; ++j){
         EL -= exp(-B(j))*(sigmoidB(j)*NQS_.W_.col(j)/NQS_.sigma2_).squaredNorm();
     }
@@ -54,13 +56,20 @@ double Hamiltonian::calc_local_energy(){
     for(int p = 0; p < NQS_.P_; ++p){
 
         if(bosons_) EL -= calc_hardcore_interaction(p);
-        if(electrons_) EL -= calc_coulomb_interaction(p);
+        if(electrons_) EL -= (NQS_.D_-1)*calc_coulomb_interaction(p);
 
         qforce = calc_quantum_force(p,NQS_.x_);
         EL -= 0.25*qforce.squaredNorm();
     }
 
-    return 0.5*EL;    
+    // interaction potential part
+    if(electrons_){
+        for(int p = 0; p < NQS_.P_; ++p){
+            EL += calc_coulomb_interaction(p);
+        }
+    }
+
+    return 0.5*EL;   
 }
 
 double Hamiltonian::calc_psi(VectorXd x){
@@ -174,7 +183,6 @@ double Hamiltonian::calc_coulomb_interaction(int p){
             laplacian_J += 1.0/R;
         }
     }
-    laplacian_J *= (NQS_.D_-1);
 
     return laplacian_J;
 }
@@ -185,7 +193,7 @@ double Hamiltonian::calc_coulomb_jastrow_factor(VectorXd x){
 
     // loop over unique pairs
     for(int p = 0; p < NQS_.P_-1; ++p){
-        for(int q = 0; q < NQS_.P_; ++q){
+        for(int q = p+1; q < NQS_.P_; ++q){
 
             R = NQS_.distance(x,p,q);
             jastrow += R;
@@ -201,7 +209,7 @@ double Hamiltonian::calc_hardcore_jastrow_factor(VectorXd x){
 
     // loop over unique pairs
     for(int p = 0; p < NQS_.P_-1; ++p){
-        for(int q = 0; q < NQS_.P_; ++q){
+        for(int q = p+1; q < NQS_.P_; ++q){
 
             R = NQS_.distance(x,p,q);
             jastrow *= (1.0-a0_/R);

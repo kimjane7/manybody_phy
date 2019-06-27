@@ -36,7 +36,7 @@ void NeuralQuantumState::setup(int n_particles, int n_hidden, int dimension, dou
 
 void NeuralQuantumState::init_uniform_positions(){
 
-    uniform_real_distribution<double> unif(-0.5,0.5);
+    uniform_real_distribution<double> unif(-0.5*sigma_,0.5*sigma_);
 
     for(int i = 0; i < M_; ++i){
 

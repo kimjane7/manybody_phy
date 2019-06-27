@@ -4,11 +4,10 @@
 #include "../optimizer.h"
 
 class StochasticGradientDescent : public Optimizer {
-private:
-
-    double eta_;
-
+	
 public:
+
+	double eta_;
 
     StochasticGradientDescent(int n_params, double learning_rate);
     ~StochasticGradientDescent(){}

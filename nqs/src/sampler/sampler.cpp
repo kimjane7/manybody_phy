@@ -10,11 +10,11 @@ Sampler::Sampler(int seed, int n_samples, double tolerance, NeuralQuantumState &
     outfile_.open(filename);
 
 	// print heading
-	outfile_ << left << setw(15) << "cycles";
-	outfile_ << left << setw(20) << "EL mean";
-	outfile_ << left << setw(20) << "EL var";
-	outfile_ << left << setw(25) << "||EL gradient||";
-	outfile_ << left << setw(20) << "ratio accepted" << "\n";
+	outfile_ << left << setw(15) << "cycle";
+	outfile_ << left << setw(20) << "E mean";
+	outfile_ << left << setw(20) << "E var";
+	outfile_ << left << setw(25) << "||E gradient||";
+	outfile_ << left << setw(20) << "% accepted" << "\n";
 	outfile_ << scientific << setprecision(8) << setfill(' ');
 }
 
@@ -88,7 +88,14 @@ void Sampler::optimize(){
 		outfile_ << left << setw(20) << setprecision(8) << EL_mean_;
 		outfile_ << left << setw(20) << EL_var;
 		outfile_ << left << setw(25) << grad_EL.norm();
-		outfile_ << left << setw(20) << ratio_accepted << "\n";
+		outfile_ << left << setw(20) << 100*ratio_accepted << "\n";
+
+		cout << left << setw(15) << cycles;
+		cout << left << setw(20) << setprecision(8) << EL_mean_;
+		cout << left << setw(20) << EL_var;
+		cout << left << setw(25) << grad_EL.norm();
+		cout << left << setw(20) << 100*ratio_accepted << "\n";
+
 
 	}while(grad_EL.norm() > tolerance_);
 }
