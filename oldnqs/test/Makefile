@@ -532,9 +532,10 @@ tests.o: tests.cpp catch.hpp \
 		../src/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_LAPACKE.h \
 		../src/optimizer/sgd/sgd.h \
 		../src/optimizer/optimizer.h \
-		../src/sampler/metropolis/importancesampling/importancesampling.h \
+		../src/sampler/metropolis/bruteforce/bruteforce.h \
 		../src/sampler/metropolis/metropolis.h \
-		../src/sampler/sampler.h
+		../src/sampler/sampler.h \
+		../src/sampler/metropolis/importancesampling/importancesampling.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o tests.o tests.cpp
 
 ####### Install

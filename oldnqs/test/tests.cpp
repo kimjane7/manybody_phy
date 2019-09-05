@@ -4,6 +4,7 @@
 #include "sampler/metropolis/bruteforce/bruteforce.h"
 #include "sampler/metropolis/importancesampling/importancesampling.h"
 
+/*
 TEST_CASE("NONINTERACTING PARTICLES IN 1D HARMONIC OSCILLATOR (BRUTE FORCE)"){
 
 	// NQS parameters
@@ -136,14 +137,13 @@ TEST_CASE("NONINTERACTING PARTICLES IN 1D HARMONIC OSCILLATOR (IMPORTANCE)"){
 		REQUIRE(Sampler.EL_mean_ == Approx(1.0));
 	}
 }
+*/
 
-
-/*
-TEST_CASE("ELECTRONS IN 2D HARMONIC OSCILLATOR"){
+TEST_CASE("ELECTRONS IN 1D HARMONIC OSCILLATOR"){
 
 	// NQS parameters
 	int n_particles, n_hidden;
-	int dimension = 2;
+	int dimension = 1;
 	double sigma = 1.0;
 
 	// Hamiltonian parameters
@@ -167,7 +167,7 @@ TEST_CASE("ELECTRONS IN 2D HARMONIC OSCILLATOR"){
 		n_particles = 2;
 		n_hidden = 8;
 		n_params = n_particles*dimension + n_hidden + n_particles*dimension*n_hidden;
-		filename = "2E_2D_importance.dat";
+		filename = "2E_1D_importance.dat";
 
 		// main program
 		NeuralQuantumState NQS(n_particles, n_hidden, dimension, sigma);
@@ -185,11 +185,11 @@ TEST_CASE("ELECTRONS IN 2D HARMONIC OSCILLATOR"){
 	}
 }
 
-TEST_CASE("BOSONS IN 2D HARMONIC OSCILLATOR"){
+TEST_CASE("BOSONS IN 1D HARMONIC OSCILLATOR"){
 
 	// NQS parameters
 	int n_particles, n_hidden;
-	int dimension = 2;
+	int dimension = 1;
 	double sigma = 1.0;
 
 	// Hamiltonian parameters
@@ -213,7 +213,7 @@ TEST_CASE("BOSONS IN 2D HARMONIC OSCILLATOR"){
 		n_particles = 2;
 		n_hidden = 8;
 		n_params = n_particles*dimension + n_hidden + n_particles*dimension*n_hidden;
-		filename = "2B_2D_importance.dat";
+		filename = "2B_1D_importance.dat";
 
 		// main program
 		NeuralQuantumState NQS(n_particles, n_hidden, dimension, sigma);
@@ -231,4 +231,3 @@ TEST_CASE("BOSONS IN 2D HARMONIC OSCILLATOR"){
 	}
 }
 
-*/
