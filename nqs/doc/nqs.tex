@@ -21,24 +21,311 @@
   {\left[\begin{matrix}}
   {\end{matrix}\right]}
   \usepackage{listings}
+\usepackage{braket}
+\usepackage[percent]{overpic}
 
 
 \begin{document}
 
-\noindent \textbf{Calogero Model}\\
 
-\noindent Consider a quantum mechanical system of $N$ one-dimensional bosons are confined in a harmonic oscillator potential and interact via a pair-wise inverse squared potential. The Hamiltonian is given by
+\section{Calogero Model}
+
+\noindent Consider a quantum system of $N$ one-dimensional bosons that are confined in a harmonic oscillator potential and interact via a pair-wise inverse squared potential. The Hamiltonian is given by
 \begin{equation}
-\hat{H}_{Cal} = \sum_{i=0}^{N-1} \left( -\frac{1}{2} \frac{\partial^2}{\partial x_i^2} + \frac{1}{2} x_i^2 \right) + \sum_{i<j} \frac{\nu (\nu -1)}{(x_i-x_j)^2},
+\hat{H}_{Cal} = \sum_{p=1}^{N} \left( -\frac{1}{2} \frac{\partial^2}{\partial x_p^2} + \frac{1}{2} x_p^2 \right) + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2},
 \end{equation}
 where $\hbar = m = \omega = 1$ and $\nu$ is an interaction parameter. Then the exact ground-state wave function and energy are given by
 \begin{equation}
-\Psi_{exact} = \exp \left( - \frac{1}{2} \sum_{i=0}^{N-1} x_i^2 \right) \prod_{i<j} |x_i-x_j|^\nu,
+\Psi_{exact} (\vec{x}) = \exp \left( - \frac{1}{2} \sum_{p=1}^{N} x_i^2 \right) \prod_{p<q} |x_p-x_q|^\nu,
 \end{equation}
 and
 \begin{equation}
 E_{exact} = \frac{N}{2} + \frac{\nu}{2} N (N-1).
 \end{equation}
+\vspace{3mm}
+
+\noindent \textbf{Goal:} We will compare how two different neural networks, feedforward neural networks (FFNNs) and restricted Boltzmann machines (RBMs),  perform as trial wave functions for a variational Monte Carlo calculation. As a benchmark, we will let each network contain only one hidden layer with the same number of hidden neurons. We want to measure how accurately $\Psi_{exact}$ is represented by the optimized networks and how close the final estimation of the ground state energy is to $E_{exact}$. 
+\vspace{5mm}
+
+\section{Variational Monte Carlo}
+
+\noindent In a variational calculation, we typically define some parametrized wave function $\Psi_T$, then minimize the expectation value of the energy with respect to the parameters. This involves a very high-dimensional integral, so we use Monte Carlo sampling for computational efficiency. Then the expectation value of the energy can be estimated by
+\begin{equation}
+E \equiv \frac{\braket{\Psi_T | \hat{H} | \Psi_T}}{\braket{\Psi_T | \Psi_T}} \approx \frac{1}{n} \sum_{i=1}^{n} E_L (\vec{x}_i) \equiv \braket{E_L},
+\end{equation}
+where the positions $\vec{x}_i$ are the sampled from the distribution $|\Psi_T|^2$, $n$ is the number of samples, and the local energy $E_L$ is given by
+\begin{equation}
+E_L \equiv \frac{1}{\Psi_T} \hat{H} \Psi_T.
+\end{equation}
+
+\noindent In order to take samples of positions efficiently, we will use the Metropolis-Hastings algorithm to randomly kick particles into the higher probability regions. To determine the direction of this kick, we will need the quantum force on the $p$th particle
+\begin{equation}
+F_p(\vec{x}) = 2 \frac{1}{\Psi_T} \frac{\partial}{\partial x_p} \Psi_T.
+\end{equation}
+
+\noindent Then the Langevin and Fokker-Planck equations give a new position $y$ from the old position $x$ according to
+\begin{equation}
+y = x + d \Delta t F(x) + \xi \sqrt{\Delta t},
+\end{equation}
+\noindent where $d = 0.5$ is the diffusion constant, $\xi$ is drawn from a normal distribution, and $\Delta t \in [0.001,0.01]$ is a chosen time step. The transition probability is given by the Green's function 
+\begin{equation}
+G(y,x) = \frac{1}{(4\pi d \Delta t)^{3N/2}} \exp \left( - \frac{(y-x-d \Delta t F(x))^2}{4 d \Delta t} \right), 
+\end{equation}
+
+\noindent so that the Metropolis-Hastings acceptance ratio is
+\begin{equation}
+A(y,x) = \min \{ 1,P(y,x) \}, 
+\end{equation} 
+\noindent where
+\begin{equation}
+P(y,x) = \frac{G(x,y)|\Psi_T(y)|^2}{G(y,x)|\Psi_T(x)|^2} = \exp \left( \frac{1}{2} (x-y)(F(y)+F(x)) + \frac{1}{4} d \Delta t (F(x)^2-F(y)^2) \right) \frac{|\Psi_T(y)|^2}{|\Psi_T(x)|^2}.
+\end{equation}
+
+\noindent Finally, we need to determine how to change our parameters $\vec{\alpha}$ to give a lower expectation value. Instead of calculating the gradient analytically, we estimate the gradient by taking the following averages
+\begin{equation}
+\frac{\partial \braket{E_L}}{\partial \alpha_k} = 2 \left( \Big\langle E_L \frac{\partial \ln \Psi_T}{\partial \alpha_k} \Big\rangle - \braket{E_L} \Big\langle \frac{\partial \ln \Psi_T}{\partial \alpha_k} \Big\rangle \right).
+\end{equation}
+
+\noindent Notation:
+\begin{align*}
+p,q &- \text{visible neurons}\\
+i,j &- \text{hidden neurons}\\
+k &- \text{variational parameters}
+\end{align*}
+
+\vspace{5mm}
+
+
+\section{Feedforward Neural Networks}
+
+
+\begin{center}
+\begin{overpic}[scale=0.5]{FFNN.png}
+\put(14,87){$x_1$}
+\put(14,70){$x_2$}
+\put(12,30){$x_{N-1}$}
+\put(14,12){$x_N$}
+\put(48,87){$h_1$}
+\put(48,70){$h_2$}
+\put(46,30){$h_{M-1}$}
+\put(47.5,12){$h_M$}
+\put(85,49.5){$u$}
+\end{overpic}
+\end{center}
+
+\noindent The inputs of the feedforward neural network are the positions of the $N$ one-dimensional bosons. They are fully-connected to $M$ hidden neurons by a matrix of weights $W \in \mathbb{R}^{M\times N}$. The hidden neurons also have an associated bias $\vec{b} \in \mathbb{R}^M$ so that
+\begin{equation}
+\vec{h} = W \vec{x} +\vec{b}
+\end{equation}
+
+ \noindent The output of the network is given by 
+\begin{equation}
+u = \vec{w}^T\vec{f}(\vec{h}),
+\end{equation}
+where $f$ is the activation function and $\vec{w} \in \mathbb{R}^{M}$ contains the weights connecting the hidden neurons with the single output. Here, we have placed a vector symbol over the activation function $f$ to emphasize that the result is a vector, with the function applied to each element of $\vec{h}$ separately. \\
+
+\noindent Since our system consists of bosons, the total wave function is positive everywhere. Thus, we take the trial wave function to be
+\begin{equation}
+\Psi_{FFNN} (\vec{x}) = \exp(u) = \exp\left( \vec{w}^T \vec{f}(W \vec{x} +\vec{b}) \right)
+\end{equation}
+This ansatz depends not only on the positions $\vec{x}$, but on the weights $W, \vec{w}$ and bias $\vec{b}$ as well. These will henceforth be known collectively as the variational parameters $\vec{\alpha} = (W, \vec{b}, \vec{w})$ of our trial wave function. We assume $\vec{\alpha} \in \mathbb{R}^{M(N+2)}$ is the flattened and concatenated form of our parameters.\\
+
+\noindent Now we calculate the local energy (5), quantum force (6), and gradient (11) for $\Psi_T = \Psi_{FFNN}$.
+
+\noindent Local energy:
+
+\begin{align*}
+E_L &= \frac{1}{\Psi_T} \hat{H} \Psi_T\\
+&= \exp\left(- u \right) \left[ \sum_{p=1}^{N} \left( -\frac{1}{2} \frac{\partial^2}{\partial x_p^2} + \frac{1}{2} x_p^2 \right) + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2} \right] \exp\left( u \right)\\
+&=  -\frac{1}{2} \sum_{p=1}^{N} \left[  \exp\left(- u \right) \frac{\partial^2}{\partial x_p^2}  \exp\left( u \right) \right]  +  \frac{1}{2} \sum_{p=1}^{N}  x_p^2  + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2}\\
+&=  -\frac{1}{2} \sum_{p=1}^{N} \left[  \frac{\partial^2 u}{\partial x_p^2} + \left( \frac{\partial u}{\partial x_p} \right)^2 \right]  +  \frac{1}{2} \sum_{p=1}^{N}  x_p^2  + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2}\\
+%
+\frac{\partial u}{\partial x_p} 
+&=\frac{\partial}{\partial x_p}  \left[ \sum_{i=1}^M w_i f(h_i) \right] 
+= \sum_{i=1}^M w_i f'(h_i)\frac{\partial h_i}{\partial x_p} \\
+&=\sum_{i=1}^M  w_i f'(h_i)\frac{\partial}{\partial x_p} \left[ \sum_{q=1}^N W_{iq}x_q +b_i \right] = \sum_{i=1}^M w_i W_{ip} f'(h_i)\\
+%
+\frac{\partial^2 u}{\partial x_p^2} &= \frac{\partial}{\partial x_p} \left[ \sum_{i=1}^M w_i W_{ip} f'(h_i) \right] = \sum_{i=1}^M w_i W_{ip} f''(h_i) \frac{\partial h_i}{\partial x_p} = \sum_{i=1}^M w_i W_{ip}^2 f''(h_i) 
+\end{align*}
+
+\begin{align*}
+E_L &=  \sum_{p=1}^{N} \left[   \sum_{i=1}^M w_i W_{ip}^2 f''(h_i)  -\frac{1}{2}  \left( \sum_{i=1}^Mw_i W_{ip} f'(h_i)   \right)^2 \right]  +  \frac{1}{2} \sum_{p=1}^{N}  x_p^2  + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2}\\
+\end{align*}
+
+\noindent Quantum force on the $p$th particle:
+\begin{align*}
+F_p(\vec{x}) &= 2 \frac{1}{\Psi_T} \frac{\partial}{\partial x_p} \Psi_T = 2 \exp(-u) \frac{\partial}{\partial x_p} \exp(u) = 2 \frac{\partial u}{\partial x_p} = 2 \sum_{i=1}^M  w_i W_{ip} f'(h_i) 
+\end{align*}
+
+\noindent Gradient of average local energy with respect to the parameters $\vec{\alpha}$:
+\begin{align*}
+\frac{\partial \braket{E_L}}{\partial \alpha_k} &= 2 \left( \Big\langle E_L \frac{\partial \ln \Psi_T}{\partial \alpha_k} \Big\rangle - \braket{E_L} \Big\langle \frac{\partial \ln \Psi_T}{\partial \alpha_k} \Big\rangle \right)\\
+%
+\frac{\partial \ln \Psi_T}{\partial W_{ip}} &= \frac{1}{\Psi_T} \frac{\partial \Psi_T}{\partial W_{ip}} = \exp(-u) \frac{\partial}{\partial W_{ip}} \exp(u) = \frac{\partial u}{\partial W_{ip}}=\frac{\partial }{\partial W_{ip}} \left[ \sum_{j=1}^M w_j f(h_j) \right] \\
+&= \sum_{j=1}^M w_j f'(h_j)\frac{\partial h_j}{\partial W_{ip}}= \sum_{j=1}^M w_j f'(h_j)\frac{\partial }{\partial W_{ip}}\left[ \sum_{q=1}^N W_{jq}x_q +b_j \right]\\
+&= \sum_{j=1}^M w_j f'(h_j)x_p\delta_{ij} = w_i f'(h_i) x_p \\
+%
+\frac{\partial \ln \Psi_T}{\partial b_i} &= \frac{\partial u}{\partial b_i}=  \frac{\partial}{\partial b_i} \left[ \sum_{j=1}^M w_j f(h_j) \right]  = \sum_{j=1}^M w_j f'(h_j) \frac{\partial h_j}{\partial b_i}\\
+&= \sum_{j=1}^M w_j f'(h_j) \frac{\partial}{\partial b_i}  \left[ \sum_{q=1}^N W_{jq}x_q +b_j \right] = \sum_{j=1}^M w_j f'(h_j) \delta_{ij} = w_i f'(h_i) \\
+%
+\frac{\partial \ln \Psi_T}{\partial w_i} &= \frac{\partial u}{\partial w_i}=  \frac{\partial}{\partial w_i} \left[ \sum_{j=1}^M w_j f(h_j) \right]  = f(h_i)\\
+\end{align*}
+
+\noindent To simplify our calculations, let us define the vector $\vec{g}$ with components given by
+\begin{equation}
+g_i = w_i f'(h_i)
+\end{equation}
+
+\noindent Then we have
+\begin{align*}
+E_L &=  \sum_{p=1}^{N} \left[   \sum_{i=1}^M w_i W_{ip}^2 f''(h_i) -\frac{1}{2}  \left( \vec{g}^T \vec{W}_p \right)^2 \right]  +  \frac{1}{2} \sum_{p=1}^{N}  x_p^2  + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2}\\
+%
+F_p(\vec{x}) &= 2 \vec{g}^T \vec{W}_p\\
+%
+\frac{\partial \ln \Psi_T}{\partial W} &= \vec{g}\vec{x}^T\\
+%
+\frac{\partial \ln \Psi_T}{\partial \vec{b}} &= \vec{g}\\
+ \frac{\partial \ln \Psi_T}{\partial \vec{w}} &= \vec{f}(\vec{h})\\ 
+\end{align*}
+
+\section{Restricted Boltzmann Machines}
+
+
+\begin{center}
+\begin{overpic}[scale=0.5]{RBM.png}
+\put(7,91){$x_1$}
+\put(7,71.5){$x_2$}
+\put(5,28){$x_{N-1}$}
+\put(7,8.5){$x_N$}
+\put(44,91){$h_1$}
+\put(44,71.5){$h_2$}
+\put(41.5,28){$h_{M-1}$}
+\put(43.5,8.5){$h_M$}
+\end{overpic}
+\end{center}
+
+
+\noindent On the surface, restricted Boltzmann machines look very similar to feedforward neural networks like the one above. However, instead of learning a mapping between the inputs $\vec{x}$ and the desired output (the many-body wave function), RBMs learn the probability distribution over its inputs $P(\vec{x})$. Since wave functions are related to probability distributions, we can approach the same problem in a different way. First, let us define the energy of a configuration of nodes for real visible nodes and binary hidden nodes:
+\begin{align}
+E_{RBM}(\vec{x},\vec{h}) &= \frac{1}{2\sigma^2} \sum_{p=1}^N (x_p-a_p)^2 - \sum_{i=1}^M b_i h_i - \frac{1}{\sigma^2} \sum_{p=1}^N \sum_{i=1}^M h_i W_{ip} x_p\\
+&= \frac{1}{2\sigma^2} \| \vec{x}-\vec{a} \|^2 - \vec{b}^T \vec{h} - \frac{1}{\sigma^2} \vec{h}^T W \vec{x}
+\end{align}
+
+\noindent Here, $\vec{a} \in \mathbb{R}^N$ is the visible bias, $\vec{b} \in \mathbb{R}^M$ is the hidden bias, and $W \in \mathbb{R}^{M\times N}$ is the matrix of weights connecting the visible nodes with the hidden nodes. From this energy expression, we can define the probability of a certain configuration occurring:
+\begin{equation*}
+P(\vec{x},\vec{h}) = \frac{1}{Z} \exp \left( -E_{RBM}(\vec{x},\vec{h}) \right)
+\end{equation*}
+
+\noindent If we integrate over the hidden nodes, we obtain a marginal probability distribution that depends only on the positions $\vec{x}$. Let the square root of this marginal probability be our representation of the wave function for our system of bosons:
+\begin{align*}
+\Psi_{RBM}(\vec{x}) &= \sqrt{P(\vec{x})}= \sqrt{\sum_{\vec{h}} P(\vec{x},\vec{h})} \\
+&= \sqrt{\sum_{\vec{h}}\frac{1}{Z} \exp \left( -\frac{1}{2\sigma^2} \| \vec{x}-\vec{a} \|^2 +\vec{b}^T \vec{h} + \frac{1}{\sigma^2} \vec{h}^T W \vec{x} \right) }\\
+&= \sqrt{\frac{1}{Z} \exp \left( -\frac{1}{2\sigma^2} \| \vec{x}-\vec{a} \|^2 \right) \prod_{i=1}^M \sum_{h_i=0}^1 \exp \left(b_i h_i + \frac{1}{\sigma^2} \sum_{p=1}^N  h_i W_{ip} x_p\right) }\\
+&= \sqrt{\frac{1}{Z} \exp \left( -\frac{1}{2\sigma^2} \| \vec{x}-\vec{a} \|^2 \right) \prod_{i=1}^M \sum_{h_i=0}^1 \exp \left(b_i h_i + \frac{1}{\sigma^2} \sum_{p=1}^N  h_i W_{ip} x_p\right) }\\
+&=\frac{1}{Z^{1/2}} \exp \left( -\frac{1}{4\sigma^2} \| \vec{x}-\vec{a} \|^2 \right) \prod_{i=1}^M \left( 1 + \exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)^{1/2}\\
+&=\frac{1}{Z^{1/2}} \exp \left( -\frac{1}{4\sigma^2} \| \vec{x}-\vec{a} \|^2 \right) \prod_{i=1}^M \exp \left( \frac{1}{2} \ln \left( 1 + \exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)\right)\\
+&=\frac{1}{Z^{1/2}} \exp \left( -\frac{1}{4\sigma^2} \| \vec{x}-\vec{a} \|^2 \right) \exp \left( \frac{1}{2} \sum_{i=1}^M \ln \left( 1 + \exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)\right)\\
+\end{align*}
+
+\noindent Define the following to simplify our expression for the wave function:
+\begin{align}
+A(\vec{x}) &\equiv -\frac{1}{4\sigma^2} \| \vec{x}-\vec{a} \|^2\\
+B(\vec{x}) &\equiv \frac{1}{2} \sum_{i=1}^M \ln \left( 1 + \exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)\\
+\Psi_{RBM}(\vec{x}) &= \frac{1}{Z^{1/2}} \exp \big( A(\vec{x}) + B(\vec{x}) \big)
+\end{align}
+
+\noindent Then the local energy becomes:
+\begin{align*}
+E_L &= \frac{1}{\Psi_T} \hat{H} \Psi_T\\
+&= \exp (-A-B)
+\left[ \sum_{p=1}^{N} \left( -\frac{1}{2} \frac{\partial^2}{\partial x_p^2} + \frac{1}{2} x_p^2 \right) + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2} \right]
+\exp (A+B)\\
+&= -\frac{1}{2} \sum_{p=1}^{N} \left[ \exp (-A-B) \frac{\partial^2}{\partial x_p^2}  \exp(A+B)  \right]
++ \frac{1}{2} \sum_{p=1}^{N} x_p^2 + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2} \\
+&= -\frac{1}{2} \sum_{p=1}^{N} \left[  \frac{\partial^2 A}{\partial x_p^2} + \frac{\partial^2 B}{\partial x_p^2} + \left( \frac{\partial A}{\partial x_p}  + \frac{\partial B}{\partial x_p} \right)^2 \right]
++ \frac{1}{2} \sum_{p=1}^{N} x_p^2 + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2} \\
+\end{align*}
+
+\noindent Take derivatives to get the full form of the local energy:
+\begin{align*}
+A(\vec{x}) &\equiv -\frac{1}{4\sigma^2} \| \vec{x}-\vec{a} \|^2=  -\frac{1}{4\sigma^2} \sum_{q=1}^N (x_q-a_q)^2\\
+\frac{\partial A}{\partial x_p} 
+&= -\frac{1}{4\sigma^2} \sum_{q=1}^N 2(x_q-a_q) \delta_{pq} = \frac{1}{2\sigma^2} (a_p-x_p)\\
+\frac{\partial^2 A}{\partial x_p^2} 
+&= -\frac{1}{2 \sigma^2}
+\end{align*}
+
+\begin{align*}
+B(\vec{x}) &\equiv \frac{1}{2} \sum_{i=1}^M \ln \left( 1 + \exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)\\
+\frac{\partial B}{\partial x_p} 
+&= \frac{1}{2} \sum_{i=1}^M \left( 1 + \exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)^{-1}  
+\exp \left(b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right)
+\frac{\partial}{\partial x_p} \left[ \frac{1}{\sigma^2} \sum_{q=1}^N W_{iq}x_q \right]\\
+&= \frac{1}{2\sigma^2} \sum_{i=1}^M W_{ip} \left( \exp \left(-b_i - \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right)+1 \right)^{-1}\\
+%
+\frac{\partial^2 B}{\partial x_p^2} 
+&=  -\frac{1}{2\sigma^2} \sum_{i=1}^M W_{ip} \left( \exp \left(-b_i - \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right)+1 \right)^{-2} \exp \left(-b_i - \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) 
+\frac{\partial}{\partial x_p} \left[ -\frac{1}{\sigma^2} \sum_{q=1}^N W_{iq}x_q \right]\\
+&=  \frac{1}{2\sigma^4} \sum_{i=1}^M W_{ip}^2 \left( \exp \left(-b_i - \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right)+1 \right)^{-2} \exp \left(-b_i - \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \\
+\end{align*}
+
+\noindent Quantum force on the $p$th particle:
+\begin{align*}
+F_p(\vec{x}) &= 2 \frac{1}{\Psi_T} \frac{\partial}{\partial x_p} \Psi_T = 2 \exp(-A-B) \frac{\partial}{\partial x_p} \exp(A+B) \\
+&= 2 \left( \frac{\partial A}{\partial x_p} + \frac{\partial B}{\partial x_p} \right) = \frac{1}{\sigma^2} (a_p-x_p) + \frac{1}{\sigma^2} \sum_{i=1}^M W_{ip} \left( \exp \left(-b_i - \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right)+1 \right)^{-1}
+\end{align*}
+
+\noindent Derivatives for the gradient of average local energy:
+\begin{align*}
+\frac{\partial \ln \Psi_T}{\partial W_{ip}} 
+&= \exp (-A-B) \frac{\partial}{\partial W_{ip}} \exp(A+B) = \frac{\partial B}{\partial W_{ip}}\\
+&= \frac{\partial}{\partial W_{ip}} \left[ \frac{1}{2} \sum_{j=1}^M \ln \left( 1 + \exp \left(b_j + \frac{1}{\sigma^2} \vec{W}_j^T \vec{x} \right) \right) \right]\\
+&= \frac{1}{2\sigma^2}\left( 1+ \exp \left( b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \right)^{-1} \exp \left( b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) \frac{\partial}{\partial W_{ip}} \left[ \sum_{q=1}^N W_{iq}x_q \right]\\
+&= \frac{1}{2\sigma^2} \left( \exp \left( -b_i -\frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) + 1 \right)^{-1} x_p 
+\end{align*}
+
+\begin{align*}
+\frac{\partial \ln \Psi_T}{\partial b_i} 
+&= \frac{\partial B}{\partial b_i}
+= \frac{\partial}{\partial b_i} \left[ \frac{1}{2} \sum_{j=1}^M \ln \left( 1 + \exp \left(b_j + \frac{1}{\sigma^2} \vec{W}_j^T \vec{x} \right) \right) \right] \\
+&= \frac{1}{2} \left( \exp \left( -b_i -\frac{1}{\sigma^2} \vec{W}_i^T \vec{x} \right) + 1 \right)^{-1}\\
+%
+\frac{\partial \ln \Psi_T}{\partial a_p} &= \frac{\partial A}{\partial a_p}
+=  \frac{\partial}{\partial a_p}\left[ -\frac{1}{4\sigma^2} \sum_{q=1}^N (x_q-a_q)^2 \right] = \frac{1}{2\sigma^2} (x_p-a_p)
+\end{align*}
+
+\noindent Define the vectors $\vec{z}, \vec{\sigma} \in \mathbb{R}^M$ with elements
+\begin{align*}
+z_i \equiv b_i + \frac{1}{\sigma^2} \vec{W}_i^T \vec{x}, \ \ 
+\sigma_i \equiv \frac{1}{ \exp (-z_i) + 1 }, 
+\end{align*}
+
+\noindent so that we have
+\begin{align*}
+E_L &= -\frac{1}{2} \sum_{p=1}^{N} \left[   -\frac{1}{2 \sigma^2}
++ \frac{1}{2\sigma^4} \sum_{i=1}^M W_{ip}^2 \sigma_i^2 \exp(-z_i)
++ \left( \frac{1}{2\sigma^2} (a_p-x_p) + \frac{1}{2\sigma^2} \sum_{i=1}^M W_{ip} \sigma_i \right)^2 \right]\\
+& \hspace{5mm} + \frac{1}{2} \sum_{p=1}^{N} x_p^2 + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2} \\
+&=\frac{N}{4 \sigma^2}
+-\frac{1}{4\sigma^4} \sum_{p=1}^N \sum_{i=1}^M W_{ip}^2 \sigma_i^2 \exp(-z_i) 
+-\frac{1}{8} \| \vec{F}(\vec{x}) \|^2
++ \frac{1}{2}\| \vec{x} \|^2 + \sum_{p<q} \frac{\nu (\nu -1)}{(x_p-x_q)^2} \\
+F_p(\vec{x}) &= \frac{1}{\sigma^2} (a_p-x_p) + \frac{1}{\sigma^2}\vec{\sigma}^T \vec{W}_p\\
+\frac{\partial \ln \Psi_T}{\partial W} 
+&= \frac{1}{2\sigma^2} \vec{\sigma} \vec{x}^T\\
+\frac{\partial \ln \Psi_T}{\partial \vec{b}} &= \frac{1}{2}\vec{\sigma}\\
+\frac{\partial \ln \Psi_T}{\partial \vec{a}} &= \frac{1}{2\sigma^2}(\vec{x}-\vec{a}) 
+\end{align*}
+
+
+
+
+
+
+
+
+
+
 
 
 
