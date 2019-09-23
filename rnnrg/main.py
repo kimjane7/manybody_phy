@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 from keras.models import Sequential
 from keras.layers import Dense, SimpleRNN, LSTM
 
@@ -20,7 +21,14 @@ def preprocess(data, step):
     X = np.reshape(X, (N_samples, 1, step))
 
     return X, Y
+    
+##############################################################
+# compute exponential for curve fitting
+##############################################################
 
+def exponential(x, a, b, c):
+
+    return a*np.exp(-b*x)+c
 
 ##############################################################
 # main program
@@ -53,7 +61,7 @@ def main():
     rnn.add(Dense(1))
     rnn.compile(loss='mse', optimizer='adam')
 
-    # fit to data
+    # fit RNN to data
     rnn.fit(trainX, trainY, epochs=5000, batch_size=28, verbose=1)
     train_predict_rnn = rnn.predict(trainX)
     test_predict_rnn = rnn.predict(testX)
@@ -67,17 +75,23 @@ def main():
     lstm.add(Dense(1))
     lstm.compile(loss='mse', optimizer='adam')
     
-    # fit to data
+    # fit RNN to data
     lstm.fit(trainX, trainY, epochs=5000, batch_size=28, verbose=1)
     train_predict_lstm = lstm.predict(trainX)
     test_predict_lstm = lstm.predict(testX)
     prediction_lstm = np.concatenate((train_predict_lstm,test_predict_lstm), axis=0)
+    
+    # fit data to exponential
+    train_params, cov = curve_fit(exponential, s[:N_train], E[:N_train], p0=(1,2,1))
+    train_exp_fit = exponential(s, *train_params)
+
 
     # plot rnn and lstm predictions
-    plt.plot(s, E, linewidth=5, label="data", color='blue')
-    plt.plot(s[-len(prediction_rnn):], prediction_rnn, linewidth=5, label="deep RNN prediction", linestyle=':', color='red')
-    plt.plot(s[-len(prediction_lstm):], prediction_lstm, linewidth=5, label="deep LSTM prediction", linestyle=':', color='green')
-    plt.axvspan(0.0, s[N_train], color='orange', alpha=0.2, label="training region")
+    plt.plot(s, E, linewidth=5, label="data", color='steelblue')
+    plt.plot(s[-len(prediction_lstm):], train_exp_fit[-len(prediction_lstm):], linewidth=3, linestyle=':', label="exponential fit to training data", color='orange')
+    plt.plot(s[-len(prediction_rnn):], prediction_rnn, linewidth=3, label="deep RNN prediction", linestyle='--', color='indianred')
+    plt.plot(s[-len(prediction_lstm):], prediction_lstm, linewidth=3, label="deep LSTM prediction", linestyle='--', color='olivedrab')
+    plt.axvspan(0.0, s[N_train], color='red', alpha=0.2, label="training region")
     plt.legend()
     plt.ylabel("Ground state energy E")
     plt.xlabel("flow parameter s")
