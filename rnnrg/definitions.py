@@ -7,13 +7,25 @@ import numpy as np
 def preprocess(data, step, number):
     
     N_samples = data.shape[0]-step
-    X, Y = np.zeros((N_samples, step, number)), np.zeros((N_samples, number))
-    
-    for i in range(N_samples):
-        j = i+step
-        X[i,:] = data[i:j]
-        Y[i] = data[j]
 
+    if number == 1:
+        X, Y = np.zeros((N_samples, step)), np.zeros(N_samples)
+        for i in range(N_samples):
+            j = i+step
+            X[i] = data[i:j]
+            Y[i] = data[j]
+        X = np.reshape(X, (N_samples, step, 1))
+    
+    else:
+        X, Y = np.zeros((N_samples, step, number)), np.zeros((N_samples, number))
+        for i in range(N_samples):
+            j = i+step
+            X[i,:] = data[i:j]
+            Y[i] = data[j]
+        
+            
+
+        
     return X, Y
     
 ##############################################################
