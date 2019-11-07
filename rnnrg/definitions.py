@@ -1,5 +1,6 @@
 import numpy as np
 
+
 ##############################################################
 # reshape sequence data into inputs and outputs for rnn
 ##############################################################
