@@ -2,8 +2,7 @@ import numpy as np
 from definitions import preprocess
 from deepRNN import deepSimpleRNN, deepLSTM
 
-def predict_flow(g, frac_train, RNN_type, num_layers,
-                 units_list, activation_func, step):
+def predict_flow(g, frac_train, RNN_type, units, activation_func, step):
     
     # get data
     datafile = "data/magnus_ds0.01_g"+str(g)+".dat"
@@ -22,9 +21,9 @@ def predict_flow(g, frac_train, RNN_type, num_layers,
     
     # make model
     if RNN_type == 'simple':
-        RNN = deepSimpleRNN(num_layers, units_list, activation_func, step)
+        RNN = deepSimpleRNN(units, activation_func, step)
     if RNN_type == 'lstm':
-        RNN = deepLSTM(num_layers, units_list, activation_func, step)
+        RNN = deepLSTM(units, activation_func, step)
     
     # train model
     RNN.train(trainX, trainy)

@@ -1,42 +1,41 @@
+import numpy as np
+np.random.seed(1337) # for reproducability
 from keras.models import Sequential
 from keras.layers import Dense, SimpleRNN, LSTM
 from keras.callbacks import EarlyStopping
 
 class deepSimpleRNN:
     
-    def __init__(self, num_layers, units_list, activation_func, step):
+    def __init__(self, units, activation_func, step):
     
-        # check that units are provided for each layer
-        if num_layers != len(units_list):
-            raise ValueError("Provide number of units for each simple RNN layer.")
+        num_layers = len(units)
         
         # build deep RNN
         self.model = Sequential()
         
-        # first RNN layer has input shape determined by step
+        # first layer
         if num_layers == 1:
-            self.model.add(SimpleRNN(units=units_list[0], \
+            self.model.add(SimpleRNN(units=units[0], \
                                      activation=activation_func, \
                                      input_shape=(step,1)))
                                  
         if num_layers >= 2:
-            self.model.add(SimpleRNN(units=units_list[0], \
+            self.model.add(SimpleRNN(units=units[0], \
                                      activation=activation_func, \
                                      return_sequences=True, \
                                      input_shape=(step,1)))
-                                     
+        # interior layers
         if num_layers >= 3:
-            # interior RNN layers
             for n in range(1, num_layers-1):
-                self.model.add(SimpleRNN(units=units_list[n], \
+                self.model.add(SimpleRNN(units=units[n], \
                                          activation=activation_func, \
                                          return_sequences=True, \
-                                         input_shape=(step, units_list[n-1])))
+                                         input_shape=(step, units[n-1])))
+        # last layer
         if num_layers >= 2:
-            # last RNN layer
-            self.model.add(SimpleRNN(units=units_list[-1], \
+            self.model.add(SimpleRNN(units=units[-1], \
                                      activation=activation_func, \
-                                     input_shape=(step, units_list[-2])))
+                                     input_shape=(step, units[-2])))
         
         # single output
         self.model.add(Dense(1))
@@ -51,49 +50,49 @@ class deepSimpleRNN:
                            patience=20, verbose=0)
         
         # fit
-        max_epochs = 500
+        max_epochs = 1000
         self.fit = self.model.fit(X, y, \
                                   epochs=max_epochs, \
                                   callbacks=[ES], \
-                                  verbose=1)
+                                  verbose=1, \
+                                  shuffle=False)
         
  
 
 class deepLSTM:
  
-    def __init__(self, num_layers, units_list, activation_func, step):
+    def __init__(self, units, activation_func, step):
     
-        # check that units are provided for each layer
-        if num_layers != len(units_list):
-            raise ValueError("Provide number of units for each simple RNN layer.")
+        num_layers = len(units)
         
         # build deep RNN
         self.model = Sequential()
         
-        # first RNN layer has input shape determined by step
+        # first layer
         if num_layers == 1:
-            self.model.add(LSTM(units=units_list[0], \
+            self.model.add(LSTM(units=units[0], \
                                 activation=activation_func, \
                                 input_shape=(step,1)))
                                  
         if num_layers >= 2:
-            self.model.add(LSTM(units=units_list[0], \
+            self.model.add(LSTM(units=units[0], \
                                 activation=activation_func, \
                                 return_sequences=True, \
                                 input_shape=(step,1)))
-                                     
+                           
+        # interior layers
         if num_layers >= 3:
-            # interior RNN layers
             for n in range(1, num_layers-1):
-                self.model.add(LSTM(units=units_list[n], \
+                self.model.add(LSTM(units=units[n], \
                                     activation=activation_func, \
                                     return_sequences=True, \
-                                    input_shape=(step, units_list[n-1])))
+                                    input_shape=(step, units[n-1])))
+        # last RNN layer
         if num_layers >= 2:
             # last RNN layer
-            self.model.add(LSTM(units=units_list[-1], \
+            self.model.add(LSTM(units=units[-1], \
                                 activation=activation_func, \
-                                input_shape=(step, units_list[-2])))
+                                input_shape=(step, units[-2])))
         
         # single output
         self.model.add(Dense(1))
@@ -108,8 +107,9 @@ class deepLSTM:
                            patience=20, verbose=0)
         
         # fit
-        max_epochs = 500
+        max_epochs = 1000
         self.fit = self.model.fit(X, y, \
                                   epochs=max_epochs, \
                                   callbacks=[ES], \
-                                  verbose=1)
+                                  verbose=1, \
+                                  shuffle=False)
