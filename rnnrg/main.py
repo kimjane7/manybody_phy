@@ -1,21 +1,30 @@
-from plot import sidebyside_predictions
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from deepRNN import deepRNN
+from predict import predict_flow
 
 def main():
 
-    units_list = [[2**i] for i in range(3, 12)]
-    sidebyside_predictions(units_list, 'layers1')
-    
-    #fixed_total_units = 128
-    #units_list = [[i, fixed_total_units-i] for i in range(8, fixed_total_units, 8)]
-    #sidebyside_predictions(units_list, 'layers2')
-    
-    
-    #units_list = [[30,30,120], [30,60,90], [30,90,60], [30,120,30], [60,30,90], \
-    #              [60,60,60], [60,90,30], [90,30,60], [90,60,30], [120,30,30]]
-    #sidebyside_predictions(units_list, 'layers3')
-    
-    
 
+    layers = 'dssg'
+    units = [100, 100, 100, 100]
+    act_func = 'relu'
+    step = 5
+    g = 0.5
+    frac_train = 0.1
+    epochs = 100
+    use_early_stopping = False
+    
+    rnn = deepRNN(layers, units, act_func, step)
+    (s_train, prediction), (s, E) = predict_flow(rnn, g, frac_train, step, epochs, use_early_stopping)
+    
+    #plt.plot(rnn.fit.history['loss'])
+    plt.plot(s, E, color='b', label='Data')
+    plt.plot(s_train, prediction, color='r', label='Prediction')
+    plt.axvspan(0.0, frac_train*s[-1], alpha=0.2, color='r', label='training region')
+    plt.show()
 
 
 if __name__ == "__main__":

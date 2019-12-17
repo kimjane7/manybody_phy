@@ -1,10 +1,6 @@
 import numpy as np
 
 
-##############################################################
-# reshape sequence data into inputs and outputs for rnn
-##############################################################
-
 def preprocess(data, step, number):
     
     N_samples = data.shape[0]-step
@@ -24,14 +20,9 @@ def preprocess(data, step, number):
             X[i,:] = data[i:j]
             Y[i] = data[j]
         
-            
-
-        
     return X, Y
     
-##############################################################
-# compute exponential for curve fitting
-##############################################################
+
 
 def exponential(x, a, b, c):
 
