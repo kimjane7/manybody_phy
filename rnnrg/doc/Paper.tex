@@ -1,0 +1,54 @@
+\documentclass[prb, aps, twocolumn, showpacs, 10pt]{revtex4-1}
+\pdfoutput=1
+
+\usepackage{dcolumn}
+\usepackage{graphicx}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsbsy}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{nicefrac}
+\usepackage{bm}
+\usepackage{listings}
+\usepackage[percent]{overpic}
+
+\usetikzlibrary{arrows,shapes,positioning}
+\usetikzlibrary{decorations.markings}
+
+
+\begin{document}
+
+\title {Predicting the IM-SRG Flow with Recurrent Neural Networks}
+\author{Jane Kim}
+\date{\today}
+\begin{abstract}
+\vspace*{3mm}
+\end{abstract}
+\maketitle
+
+- Notes -
+\begin{enumerate}
+	\item Baseline: Reformulate neural network as an extrapolator, build best deep neural network possible
+	\begin{enumerate}
+	\item Shape of network: For a 'ddd' network, I tested [100,100,100], [10, 90, 200], and [200, 90, 10] architectures. Only the last architecture was able to capture the general trend of the flow and predict the plateau. 
+	\item Shape fine tuning: For a 'ddd' network, try a grid search over architectures that have fewer units in deeper layers.
+	\end{enumerate}
+	\item EarlyStopping tuning
+	\item Tests:
+	\begin{enumerate}
+		\item For a given $g$, train on $E(s<s_{train})$, test on $E(s>s_{train})$.
+		\item Train on $E(s)$ for small $g$, test on $E(s)$ for large $g$.
+		\item For small $g$, train on $E(s<s_{train})$ and make prediction of $E(s)$. Then train on predicted $E(s)$ for small $g$ and test on $E(s)$ for large $g$.
+	\end{enumerate}
+\end{enumerate}
+
+\section{Introduction}
+
+\section{Method}
+
+
+
+\end{document}
