@@ -35,7 +35,7 @@ def avg_sigma(predictor, num_trials, *args):
 
 
 
-def predict_remainder_flow(layers, units, activation_func,
+def predict_remainder_flow(layers, units, activation_func, \
                            data, frac_train, num_timesteps, \
                            num_epochs, use_early_stopping=False):
     """ Preprocess time series data, build RNN, and train on
@@ -64,28 +64,39 @@ def predict_remainder_flow(layers, units, activation_func,
 
     return s_pred, E_pred, loss, RNN.num_params
     
-    
-'''
-def predict_entire_flow(RNN, train_data, test_data, frac_init, num_timesteps, num_epochs, use_early_stopping=False):
 
-    # reshape data sets
-    trainX, trainy = preprocess_timeseries(train_data[1], num_timesteps, 1)
-    testX, testy = preprocess_timeseries(test_data[1], num_timesteps, 1)
-    num_data = len(train_data[0])
+def predict_different_flow(layers, units, activation_func, \
+                           data1, data2, frac_init, num_timesteps, \
+                           num_epochs, use_early_stopping=False):
+    """ Preprocess both data sets, build RNN, and train on entire data1.
+        Make prediction for entire flow in data2, using a fraction of
+        data2 to give initial starting points. """
     
-    # split testing data to give prediction initial values
+    # reshape data
+    X1, y1 = preprocess_timeseries(data1[1], num_timesteps, 1)
+    X2, y2 = preprocess_timeseries(data2[1], num_timesteps, 1)
+    num_data = len(data2[0])
+    
+    # split data2
     num_init = int(frac_init*num_data)
-    testX_init = testX[:num_init]
-    testy_init = testy[:num_init]
+    X2_init = X2[:num_init]
     
-    # train model on entire flow in training data
-    RNN.train(trainX, trainy, num_epochs, use_early_stopping)
+    # train model on data1
+    RNN = deepRNN(layers, units, activation_func, num_timesteps)
+    RNN.train(X1, y1, num_epochs, use_early_stopping)
     
-    # predict rest of flow in testing data
-    prediction = np.empty((2, num_data-num_timesteps))
-    prediction[0, :] = test_data[0][num_timesteps:]
-    prediction[1, :] = RNN.predict(testX_init, num_data-num_timesteps).reshape(-1)
-
-    return prediction
+    # predict flow for data2
+    s_pred = data2[0][num_timesteps:]
+    E_pred = RNN.predict(X2_init, num_data-num_timesteps).reshape(-1)
     
+    # MSE loss during training
+    loss = RNN.fit.history['loss']
+    
+    return s_pred, E_pred, loss, RNN.num_params
+    
+                           
+'''
+def predict_entire_flow(layers, units, activation_func, \
+                        num_timesteps, num_epochs,
+                        train_params, test_params,)
 '''
