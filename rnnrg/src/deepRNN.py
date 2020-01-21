@@ -11,6 +11,8 @@ class deepRNN:
         # check compatibility of input parameters
         if len(layers) != len(units):
             raise ValueError('Give number of units for each layer.')
+        self.num_timesteps = num_timesteps
+        self.num_pairing_params = num_pairing_params
             
         # type1
         if num_timesteps and num_pairing_params==None and num_outputs==1:
@@ -29,7 +31,7 @@ class deepRNN:
         
         # compile
         self.model.compile(loss='mse', optimizer='adam')
-        self.model.summary()
+        #self.model.summary()
         self.num_params = self.model.count_params()
     
     
@@ -38,7 +40,8 @@ class deepRNN:
         """ builds and returns a partial network with specified structure """
      
         num_layers = len(layers)
-        model = Sequential()
+        input = Input(shape=(input_len, 1))
+        model = input
         
         for i in range(num_layers):
         
@@ -58,30 +61,30 @@ class deepRNN:
                 
                 # flatten first if last layer is dense
                 if i == num_layers-1:
-                    model.add(Flatten(input_shape=shape))
-                    model.add(Dense(units[i], activation=activation_func))
+                    model = Flatten(input_shape=shape)(model)
+                    model = Dense(units[i], activation=activation_func)(model)
                     
                 else:
-                    model.add(Dense(units[i], activation=activation_func, \
-                                    input_shape=shape))
+                    model = Dense(units[i], activation=activation_func, input_shape=shape)(model)
             
             elif layers[i] == 's':
-                model.add(SimpleRNN(units[i], activation=activation_func, \
-                                    input_shape=shape, return_sequences=return_seq))
+                model = SimpleRNN(units[i], activation=activation_func, \
+                                  input_shape=shape, return_sequences=return_seq)(model)
+
             
             elif layers[i] == 'l':
-                model.add(LSTM(units[i], activation=activation_func, \
-                               input_shape=shape, return_sequences=return_seq))
+                model = LSTM(units[i], activation=activation_func, \
+                             input_shape=shape, return_sequences=return_seq)(model)
             
             elif layers[i] == 'g':
-                model.add(GRU(units[i], activation=activation_func, \
-                              input_shape=shape, return_sequences=return_seq))
+                model = GRU(units[i], activation=activation_func, \
+                            input_shape=shape, return_sequences=return_seq)(model)
             
             else:
                 raise ValueError('Choose layers from list: Dense (d), \
                                   SimpleRNN (s), LSTM (l), GRU (g).')
             
-            return model
+        return Model(input, model)
         
     
     def build_RNN_one_output(self, layers, units, activation_func, num_timesteps):
@@ -90,8 +93,12 @@ class deepRNN:
                     - predict next number in time series for each sample """
     
         # build RNN with one output
-        self.model = self.build_partial_RNN(layers, units, activation_func, num_timesteps)
-        self.model.add(Dense(1, activation=activation_func))
+        input = Input(shape=(num_timesteps, 1))
+        model = self.build_partial_RNN(layers, units, activation_func, num_timesteps)(input)
+        model = Dense(1, activation=activation_func)(model)
+        
+        self.model = Model(input, model)
+        
         
     
     def build_branched_RNN(self, layers, units, activation_func, num_timesteps, num_pairing_params):
@@ -101,30 +108,36 @@ class deepRNN:
                     - predict next number in time series for each sample """
         
         # data branch
-        data_branch = self.build_partial_RNN(layers, units, activation_func, num_timesteps)
+        data_input = Input(shape=(num_timesteps, 1))
+        data_branch = self.build_partial_RNN(layers, units, activation_func, num_timesteps)(data_input)
         
         # parameter branch
-        param_branch = Sequential()
-        param_branch.add(Dense(num_pairing_params, activation=activation_func, \
-                               input_shape=(num_pairing_params, 1)))
+        param_input = Input(shape=(num_pairing_params,))
+        param_branch = Dense(units[-1], activation=activation_func, \
+                               input_shape=(num_pairing_params,))(param_input)
         
         # merge branches
-        merged = Concatenate()([data_branch.output, param_branch.output])
+        merged = Concatenate()([data_branch, param_branch])
         merged = Dense(1, activation=activation_func)(merged)
         
         # build final model
-        self.model = Model([data_branch.input, param_branch.input], merged)
+        self.model = Model([data_input, param_input], merged)
+        
         
       
     def build_RNN_vector_output(self, layers, units, activation_func, num_pairing_params, num_outputs):
     
         # build RNN with vector output
-        self.model = self.build_partial_RNN(layers, units, activation_func, num_pairing_params)
-        self.model.add(Dense(num_outputs, activation=activation_func))
+        input = Input(shape=(num_timesteps, 1))
+        model = self.build_partial_RNN(layers, units, activation_func, num_pairing_params)(input)
+        model = Dense(num_outputs, activation=activation_func)(model)
+        
+        self.model = Model(input, model)
+
     
     
-    def train(self, X, y, num_epochs, use_early_stopping):
-        """ Train network on a data set X and targets y for a fixed
+    def train(self, X, Y, num_epochs, pairing_params=None, use_early_stopping=True):
+        """ Train network on a data set X and targets Y for a fixed
             number of epochs or using the EarlyStopping callback. """
     
         if use_early_stopping:
@@ -132,13 +145,13 @@ class deepRNN:
             ES = EarlyStopping(monitor='loss', mode='min', \
                                patience=30, verbose=0)
             
-            self.fit = self.model.fit(X, y, epochs=num_epochs, \
+            self.fit = self.model.fit(X, Y, epochs=num_epochs, \
                                       callbacks=[ES], verbose=0, \
                                       shuffle=False)
             
         else:
         
-            self.fit = self.model.fit(X, y, epochs=num_epochs, \
+            self.fit = self.model.fit(X, Y, epochs=num_epochs, \
                                       verbose=0, shuffle=False)
             
             
@@ -147,29 +160,33 @@ class deepRNN:
         """ Use trained model to make prediction on time
             series data set X and extrapolate until total
             number of iterations is reached. """
-    
-        prediction = np.empty((total_iters,1))
-        prediction[:X.shape[0]] = self.model.predict(X)
         
-        for iter in range(X.shape[0], total_iters):
-            input = np.empty((1, self.num_timesteps, 1))
-            for i in range(self.num_timesteps):
-                input[0, i] = prediction[iter-self.num_timesteps+i]
-            prediction[iter] = self.model.predict(input)
+        prediction = np.empty((total_iters,1))
+            
+        if isinstance(X, list):
+        
+            train_iters = X[0].shape[0]
+            param_input = X[1][0]
+            prediction[:train_iters] = self.model.predict(X)
+            
+            for iter in range(train_iters, total_iters):
+                
+                data_input = np.empty((1, self.num_timesteps, 1))
+                for i in range(self.num_timesteps):
+                    data_input[0, i] = prediction[iter-self.num_timesteps+i]
+                    
+                prediction[iter] = self.model.predict([data_input, param_input])
+        
+        else:
+            train_iters = X.shape[0]
+            prediction[:train_iters] = self.model.predict(X)
+            
+            for iter in range(train_iters, total_iters):
+                
+                input = np.empty((1, self.num_timesteps, 1))
+                for i in range(self.num_timesteps):
+                    input[0, i] = prediction[iter-self.num_timesteps+i]
+                    
+                prediction[iter] = self.model.predict(input)
 
-        return prediction
-
-
-
-layers = 'dls'
-units = [10, 10, 10]
-activation_func = 'linear'
-
-
-type1 = deepRNN(layers, units, activation_func, num_timesteps=2, num_pairing_params=None, num_outputs=1)
-type2 = deepRNN(layers, units, activation_func, num_timesteps=2, num_pairing_params=2, num_outputs=1)
-type3 = deepRNN(layers, units, activation_func, num_timesteps=None, num_pairing_params=2, num_outputs=1000)
-
-print("SUCCESS!")
-
-
+        return prediction.reshape(-1)
