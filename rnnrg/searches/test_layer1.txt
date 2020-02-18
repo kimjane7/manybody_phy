@@ -1,0 +1,10 @@
+# g = 0.1
+# E = 1.8969958
+# num trials = 30
+# layers, units, activation function, loss function, frac train, timesteps, E diff, E pred avg, E pred stddev, loss avg, loss stddev, params
+d, [10], elu, kld, 0.100000, 2, nan, nan, nan, 6.447238e+00, 7.896222e+00, 41
+d, [10], elu, logcosh, 0.100000, 2, 2.399673e+00, 4.296669e+00, 1.330243e+01, 3.868341e-08, 5.324474e-08, 41
+d, [10], elu, mae, 0.100000, 2, 7.957460e+07, 7.957460e+07, 4.285223e+08, 1.963464e-03, 1.267656e-03, 41
+d, [10], elu, mape, 0.100000, 2, 3.086448e+04, 3.086638e+04, 1.662073e+05, 1.447991e-01, 1.199504e-01, 41
+d, [10], elu, mse, 0.100000, 2, nan, nan, nan, 9.030060e-08, 8.594522e-08, 41
+d, [10], elu, msle, 0.100000, 2, -1.021232e+00, 8.757641e-01, 1.178996e+00, 5.284275e-01, 5.649128e-01, 41

@@ -1,0 +1,8 @@
+# g = 0.1
+# E = 1.8969958
+# num trials = 30
+# layers    units               activation     frac train     timesteps      E diff         E pred avg     E pred stddev  loss avg       loss stddev    params         
+  d         [1000]              linear         0.100          2              nan            nan            nan            9.67086e+00    7.89622e+00    4001           
+  d         [500]               linear         0.100          2              nan            nan            nan            9.67086e+00    7.89622e+00    2001           
+  s         [1000]              linear         0.100          2              nan            nan            nan            6.98451e+00    7.98709e+00    1003001        
+  s         [500]               linear         0.100          2              nan            nan            nan            1.07454e+01    7.59814e+00    251501         
